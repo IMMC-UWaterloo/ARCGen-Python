@@ -1,0 +1,4 @@
+Quick start guide
+1. Place the signal in a csv file in the working directory | the standard file name is data.csv but can be changed by editing arcgen.py line 93.
+2. On a command line, run 'pip install -r requirements.txt'
+3. Run 'python arcgen.py'
