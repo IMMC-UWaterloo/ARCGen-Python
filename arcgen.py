@@ -94,7 +94,7 @@ inputCSV = 'data.csv'     # Input Signals CSV File Name
 nResamplePoints = 200     # Number of Resample Points
 Diagnostics = 'on'        # Outputs additional information for diagnostics
 CorridorScaleFact = 1     # Corridor Scale Factor
-NormalizeSignals = 'off'  # Enables Normalization
+NormalizeSignals = 'on'  # Enables Normalization
 EllipseKFact = 1          # Ellipse K Factor
 CorridorRes = 200         # Corridor Resolution
 MinCorridorWidth = 0      # Minimum Corridor Width
@@ -323,17 +323,6 @@ def ispolycw(xv, yv):
   else:
     result= True
   return result
-
-#%% A function to be applied after using np.unique to enhance its accuracy up to a certain tolerance level
-def uniquetol(A, atol=1e-15):
-  
-  remove = np.zeros(A.shape[0], dtype=bool)	# Row indexes to be removed.
-  for i in range(A.shape[0]): 	# Not very optimized, but simple.
-    equals = np.all(np.isclose(A[i, :], A[(i + 1):, :], atol=atol), axis=1)
-    remove[(i + 1):] = np.logical_or(remove[(i + 1):], equals)
-  return A[np.logical_not(remove)]
-
-
 
 
 #%%Declarations
@@ -754,11 +743,11 @@ for iPt in range(CorridorRes-1):  #% Rows (y-axis)
       #% No vertices
 
 lineSegments = lineSegments[0:iSeg+1,:]
+lineSegments = lineSegments.round(decimals=6)
 
 #% Extract list of unique vertices from line segmens
 vertices = np.vstack([lineSegments[:,:2],lineSegments[:,2:4]])
 vertices = np.unique(vertices, axis=0)
-vertices = uniquetol(vertices, np.finfo(float).eps)
 
 index = np.zeros(len(vertices), dtype=bool)
 
