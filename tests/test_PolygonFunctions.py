@@ -132,9 +132,59 @@ def test_segintersect():
     print('case 4: on-segment intersecting = {0}'.format(intersect))
     assert (intersect == True)
 
+def test_inpolygon():
+    """
+    run a series of test cases for inpolygon, including cw vs ccw and on
+    segment. 
+    """
+    # Define a simple, horizontal C shape, clockwise
+    xycw = np.array([
+        [0, 0], 
+        [0, 2],
+        [3, 2],
+        [3, 0],
+        [2, 0],
+        [2, 1],
+        [1, 1],
+        [1, 0]
+    ])
+
+    # Case 1: in polygon, top of c. Assert true
+    assert (poly.inpolygon(xycw, [1.5, 1.5]) == True)
+    # Case 2: in polygon, right arm of c. Assert true
+    assert (poly.inpolygon(xycw, [2.5, 0.5]) == True)
+    # Case 3: in polygon, left arm tests non-convex. assert true
+    assert (poly.inpolygon(xycw, [0.5, 0.5]) == True)
+    # Case 4: Out of polygon, simple case. assert false
+    assert (poly.inpolygon(xycw, [0, 3]) == False)
+    # Case 5: out of polygon, empty part of c. assert false
+    assert (poly.inpolygon(xycw, [1.5, 0.5]) == False)
+    # Case 6: collinear with polygon segment, buy inside. assert true
+    assert (poly.inpolygon(xycw, [3, 1]) == True)
+    # Case 7: collinear with polygon segment, but outside. assert true
+    assert (poly.inpolygon(xycw, [3, 3]) == False)
+
+    # Repeat for a ccw polynomial
+    xyccw = np.flipud(xycw)
+    # Case 8: in polygon, top of c. Assert true
+    assert (poly.inpolygon(xyccw, [1.5, 1.5]) == True)
+    # Case 9: in polygon, right arm of c. Assert true
+    assert (poly.inpolygon(xyccw, [2.5, 0.5]) == True)
+    # Case 10: in polygon, left arm tests non-convex. assert true
+    assert (poly.inpolygon(xyccw, [0.5, 0.5]) == True)
+    # Case 11: Out of polygon, simple case. assert false
+    assert (poly.inpolygon(xyccw, [0, 3]) == False)
+    # Case 12: out of polygon, empty part of c. assert false
+    assert (poly.inpolygon(xyccw, [1.5, 0.5]) == False)
+    # Case 13: collinear with polygon segment, buy inside. assert true
+    assert (poly.inpolygon(xyccw, [3, 1]) == True)
+    # Case 14: collinear with polygon segment, but outside. assert true
+    assert (poly.inpolygon(xyccw, [3, 3]) == False)
+    
 
 if __name__ == '__main__':
     # test_signedpolyarea()
     # test_ispolycw()
     # test_polyarea()
-    test_segintersect()
+    # test_segintersect()
+    test_inpolygon()

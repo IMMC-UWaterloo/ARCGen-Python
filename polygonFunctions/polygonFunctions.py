@@ -70,6 +70,42 @@ def segintersect(xy1, xy2):
     # otherwise return false
     return False
 
+def inpolygon(poly, point):
+    """
+    Determines if the point is in the polygon. Uses ray-casting method. Not
+    suitable for self-intersecting polygons, but handles non-convex polygons
+    fine
+    poly: nx2 np.array of points defining polygon
+    point 1x2 np.array defining point of interest
+    """
+    poly = np.asarray(poly)
+    point = np.asarray(point)
+    maxHorizontal = np.max(poly[:,0])
+
+    if poly.shape[0] < 3:
+        print('Polygons must have at least 3 points')
+        return False
+
+    # Define horizontal ray based on point
+    ray = np.vstack((point, [1.1*maxHorizontal, point[1]]))
+
+    # cycle through all line segments,    
+    prev = poly.shape[0] - 1
+    intcount = 0
+    for curr in range(poly.shape[0]):
+        # Define current segment to check and test against ray
+        trialseg = np.vstack((poly[prev,:], poly[curr,:]))
+        if segintersect(trialseg, ray):
+            # Check edge case of point collinear with current segment.
+            if (_segorientation(poly[prev,:], poly[curr,:], point) == 0):
+                # If collinear, assume inside and short circuit counting
+                return _segcollinear(poly[prev,:], point, poly[curr,:])
+            
+            intcount += 1
+        prev = curr
+    # If the intersect count is odd, then point is in polygon. 
+    return (intcount % 2 == 1)
+
 
 def _segorientation(p1, p2, p3):
     """
@@ -92,11 +128,11 @@ def _segorientation(p1, p2, p3):
 
 def _segcollinear(p1, p2, p3):
     """
-    Checks if p3 is collinear to p1 and p2
+    Checks if p2 is collinear to p1 and p3
     p1, p2, p3 are 2 element arrays representing xy points
     """
-    if ( (p2[0] <= max(p1[0], p3[0])) and (p2[0] >= max(p1[0], p3[0]))
-        and (p2[1] <= max(p1[1], p3[1])) and (p2[1] >= max(p1[1], p3[1])) ):
+    if ( (p2[0] <= max(p1[0], p3[0])) and (p2[0] >= min(p1[0], p3[0]))
+        and (p2[1] <= max(p1[1], p3[1])) and (p2[1] >= min(p1[1], p3[1])) ):
         return True
     else:
         return False
