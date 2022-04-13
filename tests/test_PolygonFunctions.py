@@ -76,9 +76,65 @@ def test_polyarea():
 
     assert pytest.approx(area) == 5.0
 
+def test_segintersect():
+    """
+    Test line segment intersections
+    """
+    # Define simple intersecting lines
+    xy1 = np.array([
+        [0, 0],
+        [1, 1]
+    ])
+    xy2 = np.array([
+        [0, 1],
+        [1, 0]
+    ])
+    intersect = poly.segintersect(xy1, xy2)
+    print('case 1: intersecting = {0}'.format(intersect))
+    assert (intersect == True)
+
+    # Define simple intersecting lines, but ccw
+    xy1 = np.array([
+        [0, 0],
+        [1, 1]
+    ])
+    xy2 = np.array([
+        [1, 0],
+        [0, 1]
+    ])
+    intersect = poly.segintersect(xy1, xy2)
+    print('case 2: intersecting = {0}'.format(intersect))
+    assert (intersect == True)
+
+    # define non-intersecting
+    xy1 = np.array([
+        [0, 0],
+        [0, 0]
+    ])
+    xy2 = np.array([
+        [1, 1],
+        [1, 1]
+    ])
+    intersect = poly.segintersect(xy1, xy2)
+    print('case 3: collinear, non-intersecting = {0}'.format(intersect))
+    assert (intersect == False)
+
+    # define on-segment intersecting
+    xy1 = np.array([
+        [0, 0],
+        [1, 1]
+    ])
+    xy2 = np.array([
+        [1, 0],
+        [1, 1]
+    ])
+    intersect = poly.segintersect(xy1, xy2)
+    print('case 4: on-segment intersecting = {0}'.format(intersect))
+    assert (intersect == True)
 
 
 if __name__ == '__main__':
-    test_signedpolyarea()
-    test_ispolycw()
-    test_polyarea()
+    # test_signedpolyarea()
+    # test_ispolycw()
+    # test_polyarea()
+    test_segintersect()
