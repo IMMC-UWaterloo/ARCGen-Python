@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 """
 A series of functions pertaining to polygons to be used with ARCGen. These 
 functions serve as replacements for the original matlab functions
@@ -70,7 +71,7 @@ def segintersect(xy1, xy2):
     # otherwise return false
     return False
 
-def inpolygon(poly, point):
+def inpolygon(poly: npt.ArrayLike, point: npt.ArrayLike):
     """
     Determines if the point is in the polygon. Uses ray-casting method. Not
     suitable for self-intersecting polygons, but handles non-convex polygons
@@ -105,6 +106,57 @@ def inpolygon(poly, point):
         prev = curr
     # If the intersect count is odd, then point is in polygon. 
     return (intcount % 2 == 1)
+
+def polyxpoly(poly1: npt.ArrayLike, poly2: npt.ArrayLike):
+    """
+    Computes the intersection of two polynomials, returning x,y intercept and 
+    index intercepts. Does not assumed closed polygons. 
+    poly1, poly2: nx2 np.array of points defining polygon
+    """
+    # Loop through each polygon and find intersections
+    npoly1 = poly1.shape[0]
+    npoly2 = poly2.shape[0]
+    indApproxInd = np.zeros_like(poly1)
+    count = 0
+    for i in range(npoly1-1):
+        # Build segment to be tested
+        iseg = np.vstack((poly1[i,:], poly1[i+1,:]))
+        for j in range(npoly2-1):
+            jseg = np.vstack((poly2[j,:], poly2[j+1,:]))
+            # Check if segments intersect
+            if segintersect(iseg, jseg):
+                indApproxInd[count,:] = [i,j]
+                count += 1
+    indApproxInd = indApproxInd[:count,:].astype(int) # cull
+    
+    # now that we have intersecting segments, find the actual intecepts
+    interVals = np.zeros((count,2))
+    interInds = np.zeros((count,2))
+    for i,ind in enumerate(indApproxInd):
+        # Setu A matrix and B vector for linalg
+        A = np.zeros((4,4))
+        A[0:2,2] = -1
+        A[2:4,3] = -1
+        A[0,0] = poly1[ind[0]+1,0] - poly1[ind[0],0]
+        A[2,0] = poly1[ind[0]+1,1] - poly1[ind[0],1]
+        A[1,1] = poly2[ind[1]+1,0] - poly2[ind[1],0]
+        A[3,1] = poly2[ind[1]+1,1] - poly2[ind[1],1]
+
+        B = np.array([
+            [-poly1[ind[0],0]],
+            [-poly2[ind[1],0]],
+            [-poly1[ind[0],1]],
+            [-poly2[ind[1],1]],
+        ])
+        # Solve for both reduced indices and actual intercept locations
+        X = np.linalg.solve(A,B)
+        # break into indices and locations
+        interVals[i,:] = [X[2], X[3]]
+        interInds[i,:] = [ind[0]+X[0], ind[1]+X[1]]
+
+    return interVals, interInds
+
+
 
 
 def _segorientation(p1, p2, p3):
