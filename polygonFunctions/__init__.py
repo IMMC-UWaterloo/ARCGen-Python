@@ -1,1 +1,2 @@
-# from .polygonFunctions import signedpolyarea, ispolycw, polyarea, segintersect
+from .polygonFunctions import signedpolyarea, ispolycw, polyarea, \
+    segintersect, polyxpoly, inpolygon

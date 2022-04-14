@@ -90,11 +90,11 @@
 #################################################################################
 ##### User Input
 #################################################################################
-inputCSV = 'data.csv'     # Input Signals CSV File Name
-nResamplePoints = 200     # Number of Resample Points
+inputCSV = 'data_incomplete.csv'     # Input Signals CSV File Name
+nResamplePoints = 75     # Number of Resample Points
 Diagnostics = 'on'        # Outputs additional information for diagnostics
 CorridorScaleFact = 1     # Corridor Scale Factor
-NormalizeSignals = 'on'  # Enables Normalization
+NormalizeSignals = 'off'  # Enables Normalization
 EllipseKFact = 1          # Ellipse K Factor
 CorridorRes = 200         # Corridor Resolution
 MinCorridorWidth = 0      # Minimum Corridor Width
@@ -105,6 +105,8 @@ WarpingPenalty = 1e-2     # Warping Penalty
 ## Modules
 import numpy as np
 from numpy import inf
+import polygonFunctions as poly
+from uniquetol import uniquetol
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 from matplotlib import path
@@ -112,8 +114,6 @@ import matplotlib.cm as cm
 from scipy import interpolate
 from scipy import optimize
 import statistics
-from shapely import geometry
-from shapely.geometry import Point, Polygon, LineString, shape
 import math
 import os
 import warnings
@@ -230,61 +230,8 @@ def warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal):
 
 #%% helper function to perform linear interpolation to an isovalue of 1 only
 def interpVal(x1, y1, x2, y2):
-  val = x1+(x2-x1)*(1-y1)/(y2-y1)
-  
+  val = x1+(x2-x1)*(1-y1)/(y2-y1)  
   return val
-
-#%% returns the intersection points and of two polylines in a planar, Cartesian system, with vertices defined by x1, y1, x2 and y2.
-#%%   The function can also return a two-column array of line segment indices corresponding to the intersection points.
-def polyxpoly(x1, y1, x2, y2):
-  
-  #Converting the two curves into line string
-  line1 = LineString(np.column_stack((x1, y1)))
-  line2 = LineString(np.column_stack((x2, y2)))
-  
-  #Finding the intersection points between the two curves
-  intersPts = line1.intersection(line2)
-  xInterc = [ ((dumm.xy[0][0])) for dumm in intersPts ]
-  yInterc = [ ((dumm.xy[1][0])) for dumm in intersPts ]
-  
-  oneIndex = np.array([])
-  twoIndex = np.array([])
-
-  line1Pts = list(line1.coords)
-  line2Pts = list(line2.coords)
-
-# finding the index for the intersection points with 
-  for index1, (i,j) in enumerate(zip(line1Pts, line1Pts[1:])):
-    for indInterc in range(len(intersPts)):
-      if LineString((i,j)).distance(intersPts[indInterc]) < 1E-16:
-        oneIndex = np.append(oneIndex, index1)
-  
-  for index2, (i,j) in enumerate(zip(line2Pts, line2Pts[1:])):
-    for indInterc in range(len(intersPts)):
-      if LineString((i,j)).distance(intersPts[indInterc]
-                                    ) < 1E-16:
-        twoIndex = np.append(twoIndex, index2)
-  return xInterc, yInterc, np.column_stack((oneIndex, twoIndex)).astype(int)
-
-#%% returns points located inside or on edge of polygonal region
-def inpolygon(xq, yq, xv, yv):
-  points = list(zip(xq,yq))
-  polyPoints = list(zip(xv,yv))
-  p = []
-  for i in range(len(points)):
-    p.append(Point(points[i]))
-  line = LineString(polyPoints)
-
-  polygon = Polygon(line)
-  result = []
-  
-  for i in range(len(points)):
-    if polygon.contains(p[i]) or p[i].intersects(polygon.buffer(1e-12)):
-      result.append(1)
-    else:
-      result.append(0)
-
-  return result
 
 
 #%% returns  indices and values of nonzero elements
@@ -310,19 +257,6 @@ def find(array, string = None):
 
   else:
     return np.array(result).astype(int)
-
-
-#%% returns true if polygon vertices are in clockwise order
-def ispolycw(xv, yv):
-  polyPoints = list(zip(xv,yv))
-  line = LineString(polyPoints)
-
-  polygon = Polygon(line)
-  if polygon.exterior.is_ccw:
-    result = False
-  else:
-    result= True
-  return result
 
 
 #%%Declarations
@@ -743,11 +677,10 @@ for iPt in range(CorridorRes-1):  #% Rows (y-axis)
       #% No vertices
 
 lineSegments = lineSegments[0:iSeg+1,:]
-lineSegments = lineSegments.round(decimals=6)
 
 #% Extract list of unique vertices from line segmens
 vertices = np.vstack([lineSegments[:,:2],lineSegments[:,2:4]])
-vertices = np.unique(vertices, axis=0)
+vertices = uniquetol(vertices, 1e-8)
 
 index = np.zeros(len(vertices), dtype=bool)
 
@@ -828,17 +761,22 @@ envelope = vertices[vertConn[envInds[0].astype(int):envInds[1].astype(int)+1,0] 
 #% intercepts of the characteristic average and the largest envelope. 
 closedEnvelope = np.vstack((envelope, envelope[0,:]))
 
-_, _, indexIntercept = polyxpoly(closedEnvelope[:,0],closedEnvelope[:,1],charAvg[:,0],charAvg[:,1])
+_, indexIntercept = poly.polyxpoly(closedEnvelope,charAvg)
+
+indexIntercept = np.floor(indexIntercept).astype(int)
 
 #% If we find two intercepts, then we have no problem
-if len(indexIntercept) >=2:
+if indexIntercept.shape[0] >= 2:
+  print('SplitEnv - 2 intercepts found')
   iIntStart = indexIntercept[0,0]
   iIntEnd = indexIntercept[-1,0]
 
 #% If we find only one intercept, we need to determine if the intercept is a
 #% the start or end of the envelope. Then we need to extend the opposite
 #% side of the characteristic average to intercept the envelope. 
-elif len(indexIntercept) == 1:
+elif indexIntercept.shape[0] == 1:
+  print('SplitEnv - 1 intercept found')
+
   #% Compute extension 
   aLenInterval = 1/nResamplePoints
   indexLength = round(0.2*len(charAvg))
@@ -847,35 +785,43 @@ elif len(indexIntercept) == 1:
   aLenExtension[aLenExtension == inf] = 0
   aLenExtension = max(aLenExtension)
   
+  
   #% If the single found point is inside the envelope, the found intercept
   #% is at the end. Therefore extend the start
-  if inpolygon(charAvg[indexIntercept[1],0], charAvg[indexIntercept[1],0], envelope[:,0],envelope[:,1]): 
-    iIntEnd = indexIntercept[1]
+  if poly.inpolygon(envelope, charAvg[indexIntercept[0,1],:] ): 
+    print('   Intercept is inside polygon, therefore final intercept')
+    iIntEnd = indexIntercept[0,1]
     linestart_1 = interpolate.interp1d(np.concatenate([[0],aLenInterval]),charAvg[0:1,0], kind='linear',fill_value="extrapolate")(-aLenExtension)
     linestart_2 = interpolate.interp1d(np.concatenate([[0],aLenInterval]),charAvg[0:1,1], kind='linear',fill_value="extrapolate")(-aLenExtension)
 
     lineStart =  np.vstack(np.concatenate([linestart_1 , linestart_2]), charAvg[0:indexLength,:])
 
   #%Find intercepts to divide line using Poly
-    _, _, iIntStart = polyxpoly(closedEnvelope[:,0],closedEnvelope[:,1],lineStart[:,0],lineStart[:,1])
+    _, _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
     iIntStart = iIntStart[0]
 
   #% If the single found point is outside the envelope, the found
   #% intercept is the start
   else:
-    iIntStart = indexIntercept[0]
-    lineend_1 = interpolate.interp1d(np.array([0,1-aLenInterval]), np.concatenate([charAvg[-1,0],charAvg[-1-1,0]]), kind='linear',fill_value="extrapolate")(1+aLenExtension)
-    lineend_2 = interpolate.interp1d(np.array([0,1-aLenInterval]), np.concatenate([charAvg[-1,1],charAvg[-1-1,1]]), kind='linear',fill_value="extrapolate")(1+aLenExtension)
+    print(   'Intercept is outside polygon, therefore first intercept')
+    iIntStart = indexIntercept[0,0]
+    # charAvg = np.asarray(charAvg)
+    # TODO: replace with slope and intercept calculations. Much simplier
+    print(np.array([0,1-aLenInterval]).shape)
+    print(np.vstack([charAvg[-1,0],charAvg[-1-1,0]]).shape)
+    lineend_1 = interpolate.interp1d(np.array([0,1-aLenInterval]), np.vstack([charAvg[-1,0],charAvg[-1-1,0]]).T, kind='linear',fill_value="extrapolate")
+    lineend_2 = interpolate.interp1d(np.array([0,1-aLenInterval]).T, np.vstack([charAvg[-1,1],charAvg[-1-1,1]]), kind='linear',fill_value="extrapolate")(1+aLenExtension)
 
-    lineEnd =  np.vstack(charAvg[-1-indexLength:-1,:], np.concatenate([lineend_1 , lineend_2]))
+    lineEnd =  np.vstack(charAvg[-1-indexLength:-1,:], np.vstack([lineend_1 , lineend_2]))
     
     #%Find intercepts to divide line using Poly
-    _, _, iIntEnd = polyxpoly(closedEnvelope[-1,0],closedEnvelope[:,1], lineEnd[:,0],lineEnd[:,1])
+    _, _, iIntEnd = poly.polyxpoly(closedEnvelope, lineEnd)
     iIntEnd = iIntEnd[0]
     
 #% If we find no intercepts, we need to extend both sides of characteristic
 #% average to intercept the envelop.
 else:
+  print('SplitEnv - No Intercepts Found')
   aLenInterval = 1/nResamplePoints
   indexLength = round(0.2*len(charAvg))
   
@@ -892,17 +838,17 @@ else:
   lineEnd =  np.vstack(charAvg[-1-indexLength:-1,:], np.concatenate([lineend_1 , lineend_2]))
       
   #%Find intercepts to divide line using Poly
-  _, _, iIntStart = polyxpoly(closedEnvelope[:,0],closedEnvelope[:,1], lineStart[:,0],lineStart[:,1])
+  _, _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
   iIntStart = iIntStart[0]
     
-  _, _, iIntEnd = polyxpoly(closedEnvelope[:,0],closedEnvelope[:,1], lineEnd[:,0],lineEnd[:,1])
+  _, _, iIntEnd = poly.polyxpoly(closedEnvelope, lineEnd)
   iIntEnd = iIntEnd[0]
 
 #% To divide inner or outer corridors, first determine if polygon is clockwise
 #% or counter-clockwise. Then, based on which index is large, separate out
 #% inner and outer corridor based on which intercept index is larger. 
 
-if ispolycw(envelope[:,0],envelope[:,1]):
+if poly.ispolycw(envelope):
   if iIntStart > iIntEnd:
     outerCorr = np.vstack([envelope[iIntStart:-1,:],envelope[0:iIntEnd,:]])
     innerCorr = envelope[iIntEnd:iIntStart,:]
