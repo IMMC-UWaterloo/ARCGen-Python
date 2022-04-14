@@ -229,9 +229,12 @@ def warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal):
 
 
 #%% helper function to perform linear interpolation to an isovalue of 1 only
-def interpVal(x1, y1, x2, y2):
+def interpIso(x1, y1, x2, y2):
   val = x1+(x2-x1)*(1-y1)/(y2-y1)  
   return val
+
+def interpLin(x1, y1, x2,  y2, xq):
+  return y1 + (xq-x1)*(y2-y1)/(x2-x1)
 
 
 #%% returns  indices and values of nonzero elements
@@ -558,119 +561,119 @@ for iPt in range(CorridorRes-1):  #% Rows (y-axis)
     elif  cellValue == 2:
       #% South-West
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
-      xx[iPt,jPt], interpVal(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt])]
+      lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
+      xx[iPt,jPt], interpIso(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt])]
 
     elif  cellValue == 3:
       #% West-North
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [xx[iPt+1,jPt],interpVal(yy[iPt,jPt],zz[iPt,jPt], yy[iPt+1,jPt],zz[iPt+1,jPt]),
-          interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt], xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
+      lineSegments[iSeg,:] = [xx[iPt+1,jPt],interpIso(yy[iPt,jPt],zz[iPt,jPt], yy[iPt+1,jPt],zz[iPt+1,jPt]),
+          interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt], xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
     
     elif  cellValue == 4:
       #% North-South
       iSeg = iSeg+1;
-      lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
-          interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1], zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
+      lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
+          interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1], zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
           
     elif  cellValue == 5:
       #% North-East
       iSeg = iSeg+1;
-      lineSegments[iSeg,:] = [interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt+1],
-          xx[iPt+1,jPt+1],interpVal(yy[iPt+1,jPt+1],zz[iPt+1,jPt+1], yy[iPt,jPt+1], zz[iPt,jPt+1])]
+      lineSegments[iSeg,:] = [interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt+1],
+          xx[iPt+1,jPt+1],interpIso(yy[iPt+1,jPt+1],zz[iPt+1,jPt+1], yy[iPt,jPt+1], zz[iPt,jPt+1])]
           
     elif  cellValue == 6:  #% Ambiguous 
       centerVal = np.mean(list([zz[iPt,jPt], zz[iPt+1,jPt], zz[iPt+1,jPt+1], zz[iPt, jPt+1]]))
       if centerVal >= 1:
         #% West-North
         iSeg = iSeg+1
-        lineSegments[iSeg,:] = [xx[iPt+1,jPt],interpVal(yy[iPt,jPt],zz[iPt,jPt], yy[iPt+1,jPt],zz[iPt+1,jPt]),
-            interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt], xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
+        lineSegments[iSeg,:] = [xx[iPt+1,jPt],interpIso(yy[iPt,jPt],zz[iPt,jPt], yy[iPt+1,jPt],zz[iPt+1,jPt]),
+            interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt], xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
               
         #% South-East
         iSeg = iSeg+1
-        lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt+1],zz[iPt,jPt+1],xx[iPt,jPt],zz[iPt,jPt]),yy[iPt,jPt+1],
-            xx[iPt,jPt+1],interpVal(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
+        lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt+1],zz[iPt,jPt+1],xx[iPt,jPt],zz[iPt,jPt]),yy[iPt,jPt+1],
+            xx[iPt,jPt+1],interpIso(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
       else:
         #% South-West
         iSeg = iSeg+1
-        lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
-            xx[iPt,jPt], interpVal(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt])]
+        lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
+            xx[iPt,jPt], interpIso(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt])]
               
         #% North-East
         iSeg = iSeg+1
-        lineSegments[iSeg,:] = [interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt+1],
-            xx[iPt+1,jPt+1],interpVal(yy[iPt+1,jPt+1],zz[iPt+1,jPt+1], yy[iPt,jPt+1], zz[iPt,jPt+1])]
+        lineSegments[iSeg,:] = [interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt+1],
+            xx[iPt+1,jPt+1],interpIso(yy[iPt+1,jPt+1],zz[iPt+1,jPt+1], yy[iPt,jPt+1], zz[iPt,jPt+1])]
 
     elif  cellValue == 7:
       #% West-East
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [xx[iPt,jPt],interpVal(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt]),
-          xx[iPt,jPt+1],interpVal(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
+      lineSegments[iSeg,:] = [xx[iPt,jPt],interpIso(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt]),
+          xx[iPt,jPt+1],interpIso(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
     
     elif  cellValue == 8:
       #% South - East
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt+1],zz[iPt,jPt+1],xx[iPt,jPt],zz[iPt,jPt]),yy[iPt,jPt+1],
-          xx[iPt,jPt+1],interpVal(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
+      lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt+1],zz[iPt,jPt+1],xx[iPt,jPt],zz[iPt,jPt]),yy[iPt,jPt+1],
+          xx[iPt,jPt+1],interpIso(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
                                     
     elif  cellValue == 9:
       #% South - East
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt+1],zz[iPt,jPt+1],xx[iPt,jPt],zz[iPt,jPt]),yy[iPt,jPt+1],
-          xx[iPt,jPt+1],interpVal(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
+      lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt+1],zz[iPt,jPt+1],xx[iPt,jPt],zz[iPt,jPt]),yy[iPt,jPt+1],
+          xx[iPt,jPt+1],interpIso(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
 
     elif  cellValue == 10:
       #% West-East
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [xx[iPt,jPt],interpVal(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],
-          zz[iPt+1,jPt]), xx[iPt,jPt+1],interpVal(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
+      lineSegments[iSeg,:] = [xx[iPt,jPt],interpIso(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],
+          zz[iPt+1,jPt]), xx[iPt,jPt+1],interpIso(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
 
     elif  cellValue == 11: #% Ambiguous
       centerVal = np.mean(list([zz[iPt,jPt], zz[iPt+1,jPt], zz[iPt+1,jPt+1], zz[iPt, jPt+1]]))
       if centerVal >= 1:
         #% South-West
         iSeg = iSeg+1
-        lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
-            xx[iPt,jPt], interpVal(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt])]
+        lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
+            xx[iPt,jPt], interpIso(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt])]
 
         #% North-East
         iSeg = iSeg+1
-        lineSegments[iSeg,:] = [interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt+1],
-            xx[iPt+1,jPt+1],interpVal(yy[iPt+1,jPt+1],zz[iPt+1,jPt+1], yy[iPt,jPt+1], zz[iPt,jPt+1])]
+        lineSegments[iSeg,:] = [interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt+1],
+            xx[iPt+1,jPt+1],interpIso(yy[iPt+1,jPt+1],zz[iPt+1,jPt+1], yy[iPt,jPt+1], zz[iPt,jPt+1])]
       else:
         #% West-North
         iSeg = iSeg+1
-        lineSegments[iSeg,:] = [xx[iPt+1,jPt],interpVal(yy[iPt,jPt],zz[iPt,jPt], yy[iPt+1,jPt],zz[iPt+1,jPt]),
-              interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt], xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
+        lineSegments[iSeg,:] = [xx[iPt+1,jPt],interpIso(yy[iPt,jPt],zz[iPt,jPt], yy[iPt+1,jPt],zz[iPt+1,jPt]),
+              interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt], xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
         #% South-East
         iSeg = iSeg+1
-        lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt+1],zz[iPt,jPt+1],xx[iPt,jPt],zz[iPt,jPt]),yy[iPt,jPt+1],
-            xx[iPt,jPt+1],interpVal(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
+        lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt+1],zz[iPt,jPt+1],xx[iPt,jPt],zz[iPt,jPt]),yy[iPt,jPt+1],
+            xx[iPt,jPt+1],interpIso(yy[iPt,jPt+1],zz[iPt,jPt+1],yy[iPt+1,jPt+1],zz[iPt+1,jPt+1])]
 
     elif  cellValue == 12:
       #% North-East
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt+1],
-          xx[iPt+1,jPt+1],interpVal(yy[iPt+1,jPt+1],zz[iPt+1,jPt+1], yy[iPt,jPt+1], zz[iPt,jPt+1])]
+      lineSegments[iSeg,:] = [interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt+1],
+          xx[iPt+1,jPt+1],interpIso(yy[iPt+1,jPt+1],zz[iPt+1,jPt+1], yy[iPt,jPt+1], zz[iPt,jPt+1])]
     
     elif  cellValue == 13:
       #% North-South
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
-          interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1], zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
+      lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
+          interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt],xx[iPt+1,jPt+1], zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
     
     elif  cellValue == 14:
       #% West-North
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [xx[iPt+1,jPt],interpVal(yy[iPt,jPt],zz[iPt,jPt], yy[iPt+1,jPt],zz[iPt+1,jPt]),
-          interpVal(xx[iPt+1,jPt],zz[iPt+1,jPt], xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
+      lineSegments[iSeg,:] = [xx[iPt+1,jPt],interpIso(yy[iPt,jPt],zz[iPt,jPt], yy[iPt+1,jPt],zz[iPt+1,jPt]),
+          interpIso(xx[iPt+1,jPt],zz[iPt+1,jPt], xx[iPt+1,jPt+1],zz[iPt+1,jPt+1]),yy[iPt+1,jPt]]
 
     elif  cellValue == 15:
       #% South-West
       iSeg = iSeg+1
-      lineSegments[iSeg,:] = [interpVal(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
-          xx[iPt,jPt], interpVal(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt])]
+      lineSegments[iSeg,:] = [interpIso(xx[iPt,jPt],zz[iPt,jPt],xx[iPt,jPt+1],zz[iPt,jPt+1]),yy[iPt,jPt],
+          xx[iPt,jPt], interpIso(yy[iPt,jPt],zz[iPt,jPt],yy[iPt+1,jPt],zz[iPt+1,jPt])]
 
     elif  cellValue == 16:
       pass
@@ -797,8 +800,8 @@ elif indexIntercept.shape[0] == 1:
     lineStart =  np.vstack(np.concatenate([linestart_1 , linestart_2]), charAvg[0:indexLength,:])
 
   #%Find intercepts to divide line using Poly
-    _, _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
-    iIntStart = iIntStart[0]
+    _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
+    iIntStart = np.floor(iIntStart[0,0]).astype(int)
 
   #% If the single found point is outside the envelope, the found
   #% intercept is the start
@@ -807,16 +810,17 @@ elif indexIntercept.shape[0] == 1:
     iIntStart = indexIntercept[0,0]
     # charAvg = np.asarray(charAvg)
     # TODO: replace with slope and intercept calculations. Much simplier
-    print(np.array([0,1-aLenInterval]).shape)
-    print(np.vstack([charAvg[-1,0],charAvg[-1-1,0]]).shape)
-    lineend_1 = interpolate.interp1d(np.array([0,1-aLenInterval]), np.vstack([charAvg[-1,0],charAvg[-1-1,0]]).T, kind='linear',fill_value="extrapolate")
-    lineend_2 = interpolate.interp1d(np.array([0,1-aLenInterval]).T, np.vstack([charAvg[-1,1],charAvg[-1-1,1]]), kind='linear',fill_value="extrapolate")(1+aLenExtension)
+    # TODO: replace in other places too. 
+    # lineend_1 = interpolate.interp1d(np.array([1,1-aLenInterval]), np.vstack([charAvg[-1,0],charAvg[-1-1,0]]).T, kind='linear',fill_value="extrapolate")
+    # lineend_2 = interpolate.interp1d(np.array([1,1-aLenInterval]).T, np.vstack([charAvg[-1,1],charAvg[-1-1,1]]), kind='linear',fill_value="extrapolate")(1+aLenExtension)
+    lineend_0 = interpLin(1-aLenInterval, charAvg[-2,0], 1, charAvg[-1,0], (1+aLenExtension))
+    lineend_1 = interpLin(1-aLenInterval, charAvg[-2,1], 1, charAvg[-1,1], (1+aLenExtension))
 
-    lineEnd =  np.vstack(charAvg[-1-indexLength:-1,:], np.vstack([lineend_1 , lineend_2]))
+    lineEnd =  np.vstack((charAvg[-1-indexLength:-1,:], np.vstack(np.asarray([[lineend_0 , lineend_1]]))))
     
     #%Find intercepts to divide line using Poly
-    _, _, iIntEnd = poly.polyxpoly(closedEnvelope, lineEnd)
-    iIntEnd = iIntEnd[0]
+    _, iIntEnd = poly.polyxpoly(closedEnvelope, lineEnd)
+    iIntEnd = np.floor(iIntEnd[-1,0]).astype(int)
     
 #% If we find no intercepts, we need to extend both sides of characteristic
 #% average to intercept the envelop.
@@ -838,16 +842,16 @@ else:
   lineEnd =  np.vstack(charAvg[-1-indexLength:-1,:], np.concatenate([lineend_1 , lineend_2]))
       
   #%Find intercepts to divide line using Poly
-  _, _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
-  iIntStart = iIntStart[0]
+  _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
+  iIntStart = np.floor(iIntStart[0,0]).astype(int)
     
-  _, _, iIntEnd = poly.polyxpoly(closedEnvelope, lineEnd)
-  iIntEnd = iIntEnd[0]
+  _, iIntEnd = poly.polyxpoly(closedEnvelope, lineEnd)
+  iIntEnd = np.floor(iIntEnd[-1,0]).astype(int)
 
 #% To divide inner or outer corridors, first determine if polygon is clockwise
 #% or counter-clockwise. Then, based on which index is large, separate out
 #% inner and outer corridor based on which intercept index is larger. 
-
+print('start-end index {0}-{1}'.format(iIntStart, iIntEnd))
 if poly.ispolycw(envelope):
   if iIntStart > iIntEnd:
     outerCorr = np.vstack([envelope[iIntStart:-1,:],envelope[0:iIntEnd,:]])
@@ -867,18 +871,18 @@ else:
 #% Resample corridors. Use nResamplePoints. Because corridors are
 #% non-monotonic, arc-length method discussed above is used. 
 #% Start with inner corridor. Magnitudes are being normalized.
-segments = np.sqrt(((innerCorr[0:-1,0]-innerCorr[1:,0]) / np.max(innerCorr[:,0])) **2 + ((innerCorr[0:-1,1]-innerCorr[1:,1])/np.max(innerCorr[:,1])) **2)
-alen = np.cumsum(np.concatenate([[0],segments]))
-alenResamp = np.linspace(0,np.max(alen), num = nResamplePoints)
-alenResamp = np.transpose(alenResamp)
-innerCorr = np.column_stack([interpolate.interp1d(alen,innerCorr[:,0])(alenResamp), interpolate.interp1d(alen,innerCorr[:,1])(alenResamp)])
+# segments = np.sqrt(((innerCorr[0:-1,0]-innerCorr[1:,0]) / np.max(innerCorr[:,0])) **2 + ((innerCorr[0:-1,1]-innerCorr[1:,1])/np.max(innerCorr[:,1])) **2)
+# alen = np.cumsum(np.concatenate([[0],segments]))
+# alenResamp = np.linspace(0,np.max(alen), num = nResamplePoints)
+# alenResamp = np.transpose(alenResamp)
+# innerCorr = np.column_stack([interpolate.interp1d(alen,innerCorr[:,0])(alenResamp), interpolate.interp1d(alen,innerCorr[:,1])(alenResamp)])
 
-#% Outer Corridor
-segments = np.sqrt(((outerCorr[0:-1,0]-outerCorr[1:,0]) / np.max(outerCorr[:,0])) **2 + ((outerCorr[0:-1,1]-outerCorr[1:,1])/np.max(outerCorr[:,1])) **2)
-alen = np.cumsum(np.concatenate([[0],segments]))
-alenResamp = np.linspace(0,np.max(alen), num = nResamplePoints)
-alenResamp = np.transpose(alenResamp)
-outerCorr = np.column_stack([interpolate.interp1d(alen,outerCorr[:,0])(alenResamp), interpolate.interp1d(alen,outerCorr[:,1])(alenResamp)])
+# #% Outer Corridor
+# segments = np.sqrt(((outerCorr[0:-1,0]-outerCorr[1:,0]) / np.max(outerCorr[:,0])) **2 + ((outerCorr[0:-1,1]-outerCorr[1:,1])/np.max(outerCorr[:,1])) **2)
+# alen = np.cumsum(np.concatenate([[0],segments]))
+# alenResamp = np.linspace(0,np.max(alen), num = nResamplePoints)
+# alenResamp = np.transpose(alenResamp)
+# outerCorr = np.column_stack([interpolate.interp1d(alen,outerCorr[:,0])(alenResamp), interpolate.interp1d(alen,outerCorr[:,1])(alenResamp)])
 
 
 #%% Draw extension lines and sampling points to MS plot
@@ -904,9 +908,9 @@ if Diagnostics == 'on':
 
 # Output
 
-output = np.column_stack([charAvg,innerCorr,outerCorr])
-fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
-np.savetxt("results/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
+# output = np.column_stack([charAvg,innerCorr,outerCorr])
+# fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
+# np.savetxt("results/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
 
 
 fig = plt.figure(figsize= (6,4), dpi=300)
