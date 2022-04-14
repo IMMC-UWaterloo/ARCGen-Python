@@ -33,7 +33,7 @@ def uniquetol(a:npt.ArrayLike, tol=1e-6):
         # Find all rows within maximum tolerance
         else:
             # within tol is when difference in both columns is below tol
-            withintol = np.max(np.abs(a[i,:] - a[i+1:, :]) ,axis=1) < tol
+            withintol = np.max(np.abs(a[i,:] - a[i+1:, :]) ,axis=1) <= tol
             withintol = np.hstack((np.zeros(i+1).astype(bool), withintol))
             saveindex[withintol.astype(bool)] = 0
 
