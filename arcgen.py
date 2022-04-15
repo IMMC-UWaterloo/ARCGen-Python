@@ -517,7 +517,7 @@ if Diagnostics == 'on' or Diagnostics == 'detailed':
 #%% Begin marching squares algorithm
 #% Create grids based on upper and lower of characteristic average plus 120%
 #% of maximum standard deviation
-scaleFact = 1.2 * EllipseKFact
+scaleFact = 1.25 * EllipseKFact
 xx,yy = np.meshgrid(np.linspace((np.min(charAvg[:,0]) - scaleFact*np.max(stdevData[:,0])), (np.max(charAvg[:,0]) + scaleFact * np.max(stdevData[:,0])), num = CorridorRes), np.linspace((np.min(charAvg[:,1]) - scaleFact*np.max(stdevData[:,1])), (np.max(charAvg[:,1]) + scaleFact*np.max(stdevData[:,1])), num = CorridorRes), indexing='xy')
 zz = np.zeros(np.shape(xx))   #% initalize grid of ellipse values
 # #% For each grid point, find the max of each standard deviation ellipse
@@ -689,8 +689,7 @@ lineSegments = lineSegments[0:iSeg+1,:]
 
 #% Extract list of unique vertices from line segmens
 vertices = np.vstack([lineSegments[:,:2],lineSegments[:,2:4]])
-vertices = uniquetol(vertices, 1e-8)
-
+vertices = uniquetol(vertices, 1e-12)
 index = np.zeros(len(vertices), dtype=bool)
 
 #% Create a vertex connectivity table. The 1e-12 value is here because
@@ -800,10 +799,10 @@ elif indexIntercept.shape[0] == 1:
   if poly.inpolygon(envelope, charAvg[indexIntercept[0,1],:] ): 
     print('   Intercept is inside polygon, therefore final intercept')
     iIntEnd = indexIntercept[0,1]
-    linestart_1 = interpolate.interp1d(np.concatenate([[0],aLenInterval]),charAvg[0:1,0], kind='linear',fill_value="extrapolate")(-aLenExtension)
-    linestart_2 = interpolate.interp1d(np.concatenate([[0],aLenInterval]),charAvg[0:1,1], kind='linear',fill_value="extrapolate")(-aLenExtension)
+    linestart_0 = interpLin(0, charAvg[0,0], aLenInterval, charAvg[1,0], -aLenExtension)
+    linestart_1 = interpLin(0, charAvg[0,1], aLenInterval, charAvg[1,1], -aLenExtension)
 
-    lineStart =  np.vstack(np.concatenate([linestart_1 , linestart_2]), charAvg[0:indexLength,:])
+    lineStart =  np.vstack(np.concatenate([linestart_0 , linestart_1]), charAvg[0:indexLength,:])
 
   #%Find intercepts to divide line using Poly
     _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
@@ -817,8 +816,6 @@ elif indexIntercept.shape[0] == 1:
     # charAvg = np.asarray(charAvg)
     # TODO: replace with slope and intercept calculations. Much simplier
     # TODO: replace in other places too. 
-    # lineend_1 = interpolate.interp1d(np.array([1,1-aLenInterval]), np.vstack([charAvg[-1,0],charAvg[-1-1,0]]).T, kind='linear',fill_value="extrapolate")
-    # lineend_2 = interpolate.interp1d(np.array([1,1-aLenInterval]).T, np.vstack([charAvg[-1,1],charAvg[-1-1,1]]), kind='linear',fill_value="extrapolate")(1+aLenExtension)
     lineend_0 = interpLin(1-aLenInterval, charAvg[-2,0], 1, charAvg[-1,0], (1+aLenExtension))
     lineend_1 = interpLin(1-aLenInterval, charAvg[-2,1], 1, charAvg[-1,1], (1+aLenExtension))
 
@@ -839,13 +836,13 @@ else:
   aLenExtension[aLenExtension == inf] = 0
   aLenExtension = max(aLenExtension)
 
-  linestart_1 = interpolate.interp1d(np.concatenate([[0],aLenInterval]),charAvg[0:1,0], kind='linear',fill_value="extrapolate")(-aLenExtension)
-  linestart_2 = interpolate.interp1d(np.concatenate([[0],aLenInterval]),charAvg[0:1,1], kind='linear',fill_value="extrapolate")(-aLenExtension)
-  lineStart =  np.vstack(np.concatenate([linestart_1 , linestart_2]), charAvg[0:indexLength,:])
+  linestart_0 = interpLin(0, charAvg[0,0], aLenInterval, charAvg[1,0], -aLenExtension)
+  linestart_1 = interpLin(0, charAvg[0,1], aLenInterval, charAvg[1,1], -aLenExtension)
+  lineStart =  np.vstack(np.concatenate([linestart_0 , linestart_1]), charAvg[0:indexLength,:])
   
-  lineend_1 = interpolate.interp1d([0,1-aLenInterval], np.concatenate([charAvg[-1,0],charAvg[-1-1,0]]), kind='linear',fill_value="extrapolate")(1+aLenExtension)
-  lineend_2 = interpolate.interp1d([0,1-aLenInterval], np.concatenate([charAvg[-1,1],charAvg[-1-1,1]]), kind='linear',fill_value="extrapolate")(1+aLenExtension)
-  lineEnd =  np.vstack(charAvg[-1-indexLength:-1,:], np.concatenate([lineend_1 , lineend_2]))
+  lineend_0 = interpLin(1-aLenInterval, charAvg[-2,0], 1, charAvg[-1,0], (1+aLenExtension))
+  lineend_1 = interpLin(1-aLenInterval, charAvg[-2,1], 1, charAvg[-1,1], (1+aLenExtension))
+  lineEnd =  np.vstack(charAvg[-1-indexLength:-1,:], np.concatenate([lineend_0 , lineend_1]))
       
   #%Find intercepts to divide line using Poly
   _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
@@ -893,21 +890,22 @@ else:
 
 #%% Draw extension lines and sampling points to MS plot
 if Diagnostics == 'on':
-  figd, axd = plt.subplots(1, 2, figsize = (12,4), dpi = 300)
+  figd, axd = plt.subplots(1, 2, figsize = (12,4), dpi = 1200)
+  axd[0].plot(charAvg[:,0], charAvg[:,1], label= 'Char Avg', c = 'black')
   ellipse_xy = list(zip(charAvg[:,0], charAvg[:,1]))
   for iPoint in range(nResamplePoints):
     ellipse = Ellipse(ellipse_xy[iPoint], stdevData[iPoint,0] * EllipseKFact*2, stdevData[iPoint,1] * EllipseKFact*2, angle = 0, edgecolor='grey', lw=0.6, facecolor='none')
     axd[0].add_artist(ellipse)
-  axd[0].plot(charAvg[:,0], charAvg[:,1], label= 'Char Avg', c = 'black')
-  for iSignal in inputSignals.keys():
-    axd[0].plot(inputSignals[iSignal][:,0], inputSignals[iSignal][:,1], label = iSignal)
+  # for iSignal in inputSignals.keys():
+  #   axd[0].plot(inputSignals[iSignal][:,0], inputSignals[iSignal][:,1], label = iSignal)
+  axd[0].plot(closedEnvelope[:,0], closedEnvelope[:,1], c = 'darkgreen', linewidth=0.5)
 
   axd[0].title.set_text('Char Avg and Ellipses')
   axd[0].set(xlabel='x-data', ylabel='y-data')
   axd[0].legend(loc='lower right')
 
 
-  axd[1].scatter(xx[:],yy[:], None, zz[:]>=1, )
+  axd[1].scatter(xx[:],yy[:], 0.25, zz[:]>=1, )
   axd[1].title.set_text('Corridor Extraction')
   axd[1].set(xlabel='x-data', ylabel='y-data')
   figd.savefig('results/Diagnostics.png')
@@ -919,7 +917,7 @@ if Diagnostics == 'on':
 # np.savetxt("results/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
 
 
-fig = plt.figure(figsize= (6,4), dpi=300)
+fig = plt.figure(figsize= (6,4), dpi=1200)
 if NormalizeSignals == 'on':
   for iSignal in inputSignals.keys():
     #% Resulting array is normalized arc - length, resampled x, resam.y
