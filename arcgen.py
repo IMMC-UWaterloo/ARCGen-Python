@@ -262,7 +262,7 @@ def find(array, string = None):
     return np.array(result).astype(int)
 
 
-#%%Declarations
+# Declarations, as dictionaries
 inputSignals ={}
 maxAlen = {}
 meanDev = {}
@@ -276,25 +276,30 @@ xNormMax = {}
 yNormMax = {}
 warpControlPoints = {}
 
+## Load from csv. empty values in shorter signals are given as 'nan'
 dataframe = np.genfromtxt(inputCSV, delimiter=',', encoding=None)
 numberRows, numberCols = dataframe.shape
-dataframe = np.nan_to_num(dataframe, nan=0.0, posinf=0.0, neginf=0.0)
-
+# Error check
 if numberCols % 2 == 0:
   numberSignals = int(numberCols/2)
 else:
   raise ValueError("The number of columns in the csv file is not even")    
 
+# Store input signals as list of arrays
 for i in range(len(np.hsplit(dataframe,numberSignals))):
-    inputSignals['Signal '+str(i+1)] = np.hsplit(dataframe,numberSignals)[i]
+    temp = dataframe[:, (2*i):(2*i+2)]
+    # Remove 'nan' entries
+    indexNan = np.logical_not(np.isnan(temp[:,0]))
+    # add to dictionary
+    inputSignals['Signal '+str(i+1)] = temp[indexNan,:]
 
 #%% Compute arclength based on input signal datapoints
 #% Do not perform normalization
 if NormalizeSignals == 'off':
     for iSignal in inputSignals.keys():
-        temp = inputSignals[iSignal] # Temporary for conveinenc
+        temp = inputSignals[iSignal].copy() # Temporary for convenience
 
-        # % Compute arc - length between each data point
+        # Compute arc - length between each data point
         segments = np.sqrt((temp[0:-1,0] - temp[1:,0])**2 + (temp[0:-1, 1] - temp[1:, 1])**2)
         segments = np.append([0], segments)
 
@@ -317,18 +322,19 @@ if NormalizeSignals == 'off':
 if NormalizeSignals =='on':
     #% Determine bounding box of individual signals
     for iSignal in inputSignals.keys():
-        temp = inputSignals[iSignal]  # Temporary for conveinenc
+        temp = inputSignals[iSignal]  # Temporary for convenience
 
     #% Determine min[x, y] and max[x, y]data
-        xMin[iSignal], yMin[iSignal]  = temp.min(axis=0)
+        xMin[iSignal], yMin[iSignal] = temp.min(axis=0)
         xMax[iSignal], yMax[iSignal] = temp.max(axis=0)
 
     xBound = [sum(xMin.values())/len(xMin.values()), sum(xMax.values())/len(xMax.values())]
     yBound = [sum(yMin.values())/len(yMin.values()), sum(yMax.values())/len(yMax.values())]
 
-    #% Normalize the axis of each signal, then do arc-length calcs
+    # Normalize the axis of each signal, then do arc-length calcs
     for iSignal in inputSignals.keys():
-        temp = inputSignals[iSignal] # Temporary for conveinenc
+        # This needs to be a .copy(), otherwise scaling effects inputSignals 
+        temp = inputSignals[iSignal].copy() # Temporary for convenience
 
         #% Normalize from bounding box to [-1,1]
         temp[:,0] = temp[:,0] / (xBound[1]-xBound[0])
@@ -354,7 +360,7 @@ if NormalizeSignals =='on':
 
 #% Compute mean and median arc - length deviation
 meanAlen = sum(maxAlen.values())/len(maxAlen.values())
-medianAlen = statistics.median(maxAlen.values())
+medianAlen = np.median(np.fromiter(maxAlen.values(), dtype=float))
 
 for iSignal in inputSignals.keys():
     meanDev[iSignal] = maxAlen[iSignal] - meanAlen
@@ -927,7 +933,7 @@ else:
 
 plt.plot(charAvg[:,0], charAvg[:,1], label = 'Average - ARCGen', c ='black', lw = 1.5)
 plt.plot(outerCorr[:,0], outerCorr[:,1], label = 'Corridors', c ='gold', lw = 2)
-plt.plot(innerCorr[:,0], innerCorr[:,1], c='gold', lw = 2)
+plt.plot(innerCorr[:,0], innerCorr[:,1], c='goldenrod', lw = 2)
 handles, labels = plt.gca().get_legend_handles_labels()
 labels, ids = np.unique(labels, return_index=True)
 handles = [handles[i] for i in ids]
