@@ -355,7 +355,7 @@ for i in range(len(np.hsplit(dataframe,numberSignals))):
 #% Do not perform normalization
 if NormalizeSignals == 'off':
     for iSignal in inputSignals.keys():
-        temp = inputSignals[iSignal] # Temporary for conveinenc
+        temp = inputSignals[iSignal].copy() # Temporary for conveinenc
 
         # % Compute arc - length between each data point
         segments = np.sqrt((temp[0:-1,0] - temp[1:,0])**2 + (temp[0:-1, 1] - temp[1:, 1])**2)
@@ -391,7 +391,7 @@ if NormalizeSignals =='on':
 
     #% Normalize the axis of each signal, then do arc-length calcs
     for iSignal in inputSignals.keys():
-        temp = inputSignals[iSignal] # Temporary for conveinenc
+        temp = inputSignals[iSignal].copy() # Temporary for conveinenc
 
         #% Normalize from bounding box to [-1,1]
         temp[:,0] = temp[:,0] / (xBound[1]-xBound[0])
