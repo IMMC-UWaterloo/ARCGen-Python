@@ -94,7 +94,7 @@ inputCSV = 'data_incomplete.csv'     # Input Signals CSV File Name
 nResamplePoints = 75     # Number of Resample Points
 Diagnostics = 'on'        # Outputs additional information for diagnostics
 CorridorScaleFact = 1     # Corridor Scale Factor
-NormalizeSignals = 'off'  # Enables Normalization
+NormalizeSignals = 'on'  # Enables Normalization
 EllipseKFact = 1          # Ellipse K Factor
 CorridorRes = 200         # Corridor Resolution
 MinCorridorWidth = 0      # Minimum Corridor Width
@@ -109,12 +109,8 @@ import polygonFunctions as poly
 from uniquetol import uniquetol
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
-from matplotlib import path
-import matplotlib.cm as cm
 from scipy import interpolate
 from scipy import optimize
-import statistics
-import math
 import os
 import warnings
 warnings.filterwarnings("ignore")
@@ -697,15 +693,14 @@ index = np.zeros(len(vertices), dtype=bool)
 vertConn = np.zeros((len(lineSegments),2)).astype(int)
 
 for i in range(len(vertConn)):
-  index = np.all(np.abs(lineSegments[:,:2] - vertices[i,:]) < 1e-16, axis = 1)
+  index = np.all(np.abs(lineSegments[:,:2] - vertices[i,:]) < 1e-12, axis = 1)
   vertConn[index, 0] = i
-  index = np.all(np.abs(lineSegments[:,2:4] - vertices[i,:]) < 1e-16, axis = 1)
+  index = np.all(np.abs(lineSegments[:,2:4] - vertices[i,:]) < 1e-12, axis = 1)
   vertConn[index, 1] = i
 
 #%% Start line segments sorting and envelope extraction
 nEnvelopes = 0
 allEnvelopes = np.zeros((len(vertConn),2))
-
 
 for i in range(len(vertConn)-1):
   j = i + 1 #% helper index
@@ -784,6 +779,7 @@ if indexIntercept.shape[0] >= 2:
 #% side of the characteristic average to intercept the envelope. 
 elif indexIntercept.shape[0] == 1:
   print('SplitEnv - 1 intercept found')
+  print('Coords of interecept are: ' + str(charAvg[indexIntercept[0,1]]))
 
   #% Compute extension 
   aLenInterval = 1/nResamplePoints
@@ -798,11 +794,11 @@ elif indexIntercept.shape[0] == 1:
   #% is at the end. Therefore extend the start
   if poly.inpolygon(envelope, charAvg[indexIntercept[0,1],:] ): 
     print('   Intercept is inside polygon, therefore final intercept')
-    iIntEnd = indexIntercept[0,1]
+    iIntEnd = indexIntercept[-1,0]
     linestart_0 = interpLin(0, charAvg[0,0], aLenInterval, charAvg[1,0], -aLenExtension)
     linestart_1 = interpLin(0, charAvg[0,1], aLenInterval, charAvg[1,1], -aLenExtension)
 
-    lineStart =  np.vstack(np.concatenate([linestart_0 , linestart_1]), charAvg[0:indexLength,:])
+    lineStart =  np.vstack((np.vstack(np.asarray([[linestart_0 , linestart_1]])), charAvg[0:indexLength,:]))
 
   #%Find intercepts to divide line using Poly
     _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
@@ -838,11 +834,11 @@ else:
 
   linestart_0 = interpLin(0, charAvg[0,0], aLenInterval, charAvg[1,0], -aLenExtension)
   linestart_1 = interpLin(0, charAvg[0,1], aLenInterval, charAvg[1,1], -aLenExtension)
-  lineStart =  np.vstack(np.concatenate([linestart_0 , linestart_1]), charAvg[0:indexLength,:])
+  lineStart =  np.vstack((np.vstack(np.asarray([[linestart_0 , linestart_1]])), charAvg[0:indexLength,:]))
   
   lineend_0 = interpLin(1-aLenInterval, charAvg[-2,0], 1, charAvg[-1,0], (1+aLenExtension))
   lineend_1 = interpLin(1-aLenInterval, charAvg[-2,1], 1, charAvg[-1,1], (1+aLenExtension))
-  lineEnd =  np.vstack(charAvg[-1-indexLength:-1,:], np.concatenate([lineend_0 , lineend_1]))
+  lineEnd =  np.vstack((charAvg[-1-indexLength:-1,:], np.vstack(np.asarray([[lineend_0 , lineend_1]]))))
       
   #%Find intercepts to divide line using Poly
   _, iIntStart = poly.polyxpoly(closedEnvelope, lineStart)
@@ -855,6 +851,7 @@ else:
 #% or counter-clockwise. Then, based on which index is large, separate out
 #% inner and outer corridor based on which intercept index is larger. 
 print('start-end index {0}-{1}'.format(iIntStart, iIntEnd))
+print(poly.signedpolyarea(envelope))
 if poly.ispolycw(envelope):
   if iIntStart > iIntEnd:
     outerCorr = np.vstack([envelope[iIntStart:-1,:],envelope[0:iIntEnd,:]])
@@ -874,18 +871,18 @@ else:
 #% Resample corridors. Use nResamplePoints. Because corridors are
 #% non-monotonic, arc-length method discussed above is used. 
 #% Start with inner corridor. Magnitudes are being normalized.
-# segments = np.sqrt(((innerCorr[0:-1,0]-innerCorr[1:,0]) / np.max(innerCorr[:,0])) **2 + ((innerCorr[0:-1,1]-innerCorr[1:,1])/np.max(innerCorr[:,1])) **2)
-# alen = np.cumsum(np.concatenate([[0],segments]))
-# alenResamp = np.linspace(0,np.max(alen), num = nResamplePoints)
-# alenResamp = np.transpose(alenResamp)
-# innerCorr = np.column_stack([interpolate.interp1d(alen,innerCorr[:,0])(alenResamp), interpolate.interp1d(alen,innerCorr[:,1])(alenResamp)])
+segments = np.sqrt(((innerCorr[0:-1,0]-innerCorr[1:,0]) / np.max(innerCorr[:,0])) **2 + ((innerCorr[0:-1,1]-innerCorr[1:,1])/np.max(innerCorr[:,1])) **2)
+alen = np.cumsum(np.concatenate([[0],segments]))
+alenResamp = np.linspace(0,np.max(alen), num = nResamplePoints)
+alenResamp = np.transpose(alenResamp)
+innerCorr = np.column_stack([interpolate.interp1d(alen,innerCorr[:,0])(alenResamp), interpolate.interp1d(alen,innerCorr[:,1])(alenResamp)])
 
-# #% Outer Corridor
-# segments = np.sqrt(((outerCorr[0:-1,0]-outerCorr[1:,0]) / np.max(outerCorr[:,0])) **2 + ((outerCorr[0:-1,1]-outerCorr[1:,1])/np.max(outerCorr[:,1])) **2)
-# alen = np.cumsum(np.concatenate([[0],segments]))
-# alenResamp = np.linspace(0,np.max(alen), num = nResamplePoints)
-# alenResamp = np.transpose(alenResamp)
-# outerCorr = np.column_stack([interpolate.interp1d(alen,outerCorr[:,0])(alenResamp), interpolate.interp1d(alen,outerCorr[:,1])(alenResamp)])
+#% Outer Corridor
+segments = np.sqrt(((outerCorr[0:-1,0]-outerCorr[1:,0]) / np.max(outerCorr[:,0])) **2 + ((outerCorr[0:-1,1]-outerCorr[1:,1])/np.max(outerCorr[:,1])) **2)
+alen = np.cumsum(np.concatenate([[0],segments]))
+alenResamp = np.linspace(0,np.max(alen), num = nResamplePoints)
+alenResamp = np.transpose(alenResamp)
+outerCorr = np.column_stack([interpolate.interp1d(alen,outerCorr[:,0])(alenResamp), interpolate.interp1d(alen,outerCorr[:,1])(alenResamp)])
 
 
 #%% Draw extension lines and sampling points to MS plot
@@ -912,9 +909,9 @@ if Diagnostics == 'on':
 
 # Output
 
-# output = np.column_stack([charAvg,innerCorr,outerCorr])
-# fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
-# np.savetxt("results/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
+output = np.column_stack([charAvg,innerCorr,outerCorr])
+fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
+np.savetxt("results/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
 
 
 fig = plt.figure(figsize= (6,4), dpi=1200)
