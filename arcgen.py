@@ -776,8 +776,11 @@ indexIntercept = np.floor(indexIntercept).astype(int)
 
 #% If we find two intercepts, then we have no problem
 if indexIntercept.shape[0] >= 2:
-  iIntStart = indexIntercept[0,0]
-  iIntEnd = indexIntercept[-1,0]
+  # Sort to order charAvg interecepts (2nd column), smaller charAvg intercepts
+  # are closer to start. 
+  indexSort = np.argsort(indexIntercept[:,1], axis=0)
+  iIntStart = indexIntercept[indexSort[0],0]
+  iIntEnd = indexIntercept[indexSort[-1],0]
 
 #% If we find only one intercept, we need to determine if the intercept is a
 #% the start or end of the envelope. Then we need to extend the opposite
@@ -810,8 +813,6 @@ elif indexIntercept.shape[0] == 1:
   else:
     iIntStart = indexIntercept[0,0]
     # charAvg = np.asarray(charAvg)
-    # TODO: replace with slope and intercept calculations. Much simplier
-    # TODO: replace in other places too. 
     lineend_0 = interpLin(1-aLenInterval, charAvg[-2,0], 1, charAvg[-1,0], (1+aLenExtension))
     lineend_1 = interpLin(1-aLenInterval, charAvg[-2,1], 1, charAvg[-1,1], (1+aLenExtension))
 
@@ -849,21 +850,22 @@ else:
 #% To divide inner or outer corridors, first determine if polygon is clockwise
 #% or counter-clockwise. Then, based on which index is large, separate out
 #% inner and outer corridor based on which intercept index is larger. 
+print(poly.signedpolyarea(envelope))
+print(poly.ispolycw(envelope))
 if poly.ispolycw(envelope):
   if iIntStart > iIntEnd:
-    outerCorr = np.vstack([envelope[iIntStart:-1,:],envelope[0:iIntEnd,:]])
+    outerCorr = np.vstack([envelope[iIntStart:,:],envelope[:iIntEnd,:]])
     innerCorr = envelope[iIntEnd:iIntStart,:]
   else:
     outerCorr = envelope[iIntStart:iIntEnd,:]
-    innerCorr = np.vstack([envelope[iIntEnd:-1,:], envelope[0:iIntStart,:]])
+    innerCorr = np.vstack([envelope[iIntEnd:,:], envelope[:iIntStart,:]])
 else:
   if iIntStart > iIntEnd:
-    innerCorr = np.vstack([envelope[iIntStart:-1,:], envelope[0:iIntEnd,:]])
+    innerCorr = np.vstack([envelope[iIntStart:,:], envelope[:iIntEnd,:]])
     outerCorr = envelope[iIntEnd:iIntStart,:]
   else:
     innerCorr = envelope[iIntStart:iIntEnd,:]
-    outerCorr = np.vstack([envelope[iIntEnd:-1,:],envelope[0:iIntStart,:]])
-
+    outerCorr = np.vstack([envelope[iIntEnd:,:],envelope[:iIntStart,:]])
 
 #% Resample corridors. Use nResamplePoints. Because corridors are
 #% non-monotonic, arc-length method discussed above is used. 
@@ -924,8 +926,8 @@ else:
   plt.title('ArcGen - No Normalization')
 
 plt.plot(charAvg[:,0], charAvg[:,1], label = 'Average - ARCGen', c ='black', lw = 1.5)
-plt.plot(outerCorr[:,0], outerCorr[:,1], label = 'Corridors', c ='gold', lw = 2)
-plt.plot(innerCorr[:,0], innerCorr[:,1], c='goldenrod', lw = 2)
+plt.plot(innerCorr[:,0], innerCorr[:,1], label = 'Inner Corridors', c='gold', lw = 1.5)
+plt.plot(outerCorr[:,0], outerCorr[:,1], label = 'Outer Corridors', c ='goldenrod', lw = 1.5)
 handles, labels = plt.gca().get_legend_handles_labels()
 labels, ids = np.unique(labels, return_index=True)
 handles = [handles[i] for i in ids]
