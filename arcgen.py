@@ -293,6 +293,7 @@ for i in range(len(np.hsplit(dataframe,numberSignals))):
 #% Do not perform normalization
 if NormalizeSignals == 'off':
     for iSignal in inputSignals.keys():
+
         temp = inputSignals[iSignal].copy() # Temporary for convenience
 
         # Compute arc - length between each data point
@@ -331,6 +332,7 @@ if NormalizeSignals =='on':
     for iSignal in inputSignals.keys():
         # This needs to be a .copy(), otherwise scaling effects inputSignals 
         temp = inputSignals[iSignal].copy() # Temporary for convenience
+
 
         #% Normalize from bounding box to [-1,1]
         temp[:,0] = temp[:,0] / (xBound[1]-xBound[0])
