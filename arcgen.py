@@ -352,7 +352,9 @@ if NormalizeSignals =='on':
         xNormMax[iSignal], yNormMax[iSignal] = temp.max(axis=0)
 
         # % Remove spurious duplicates
-        inputSignals[iSignal] = np.unique(inputSignals[iSignal], axis=0)
+        temp = inputSignals[iSignal].copy()
+        _, uniqueIndex = np.unique(temp[:, 3], return_index=True)
+        inputSignals[iSignal] = temp[uniqueIndex, :]
 
 #% Compute mean and median arc - length deviation
 meanAlen = sum(maxAlen.values())/len(maxAlen.values())
@@ -420,7 +422,7 @@ if nWarpCtrlPts > 0:
     lb = 0.05 * np.ones((nWarp*(nSignal*2)))
     ub = 0.95 * np.ones((nWarp*(nSignal*2)))
     A = np.zeros([((nWarp-1) * (nSignal * 2)), (nWarp * (nSignal * 2))]) # may not be needed but added for future use
-    b = -0.05 * np.ones(((nWarp) * (nSignal * 2)))  # % Force some separation between warped points
+    b = -0.05 * np.ones(((nWarp-1) * (nSignal * 2)))  # % Force some separation between warped points
     
     for iSignal in range(nSignal * 2):
       for iWarp in range(nWarp-1):
@@ -429,7 +431,8 @@ if nWarpCtrlPts > 0:
   
   #% Execute optimization and compute warped signals
   bounds = list(zip(lb, ub))
-  optWarpArrayX = optimize.minimize(warpingObjective, x0, args=(nWarp,inputSignals, WarpingPenalty,nResamplePoints), method = 'SLSQP', bounds=bounds, options={ 'disp': False})
+  linConstraints = optimize.LinearConstraint(A, -np.inf *np.ones(((nWarp-1) * (nSignal * 2))), b)
+  optWarpArrayX = optimize.minimize(warpingObjective, x0, args=(nWarp,inputSignals, WarpingPenalty,nResamplePoints), method = 'SLSQP', bounds=bounds, options={ 'disp': False}, constraints=linConstraints)
   optWarpArray =optWarpArrayX.x
   optWarpArray = optWarpArray.reshape((nSignal*2,nWarp), order='F')
 
@@ -484,6 +487,7 @@ if Diagnostics == 'on' or Diagnostics == 'detailed':
     if nWarpCtrlPts > 0:
       interpX = np.concatenate([[0],optWarpArray[iSignal+nSignal,:],[1]], axis=None, dtype='float')
       interpY = np.concatenate([[0],optWarpArray[iSignal,:],[1]], axis=None, dtype='float')
+      ax[0][1].plot(interpX, interpY, lw=0.0, marker='x', markersize=6)
       interpResults = interpolate.pchip(interpX, interpY, axis=0)(inputSignals[keys][:,3])
       ax[0][1].plot(inputSignals[keys][:,3],interpResults, label = keys )
     else: 
@@ -770,7 +774,6 @@ indexIntercept = np.floor(indexIntercept).astype(int)
 
 #% If we find two intercepts, then we have no problem
 if indexIntercept.shape[0] >= 2:
-  print('SplitEnv - 2 intercepts found')
   iIntStart = indexIntercept[0,0]
   iIntEnd = indexIntercept[-1,0]
 
@@ -778,9 +781,6 @@ if indexIntercept.shape[0] >= 2:
 #% the start or end of the envelope. Then we need to extend the opposite
 #% side of the characteristic average to intercept the envelope. 
 elif indexIntercept.shape[0] == 1:
-  print('SplitEnv - 1 intercept found')
-  print('Coords of interecept are: ' + str(charAvg[indexIntercept[0,1]]))
-
   #% Compute extension 
   aLenInterval = 1/nResamplePoints
   indexLength = round(0.2*len(charAvg))
@@ -793,7 +793,6 @@ elif indexIntercept.shape[0] == 1:
   #% If the single found point is inside the envelope, the found intercept
   #% is at the end. Therefore extend the start
   if poly.inpolygon(envelope, charAvg[indexIntercept[0,1],:] ): 
-    print('   Intercept is inside polygon, therefore final intercept')
     iIntEnd = indexIntercept[-1,0]
     linestart_0 = interpLin(0, charAvg[0,0], aLenInterval, charAvg[1,0], -aLenExtension)
     linestart_1 = interpLin(0, charAvg[0,1], aLenInterval, charAvg[1,1], -aLenExtension)
@@ -807,7 +806,6 @@ elif indexIntercept.shape[0] == 1:
   #% If the single found point is outside the envelope, the found
   #% intercept is the start
   else:
-    print(   'Intercept is outside polygon, therefore first intercept')
     iIntStart = indexIntercept[0,0]
     # charAvg = np.asarray(charAvg)
     # TODO: replace with slope and intercept calculations. Much simplier
@@ -824,7 +822,6 @@ elif indexIntercept.shape[0] == 1:
 #% If we find no intercepts, we need to extend both sides of characteristic
 #% average to intercept the envelop.
 else:
-  print('SplitEnv - No Intercepts Found')
   aLenInterval = 1/nResamplePoints
   indexLength = round(0.2*len(charAvg))
   
@@ -850,8 +847,6 @@ else:
 #% To divide inner or outer corridors, first determine if polygon is clockwise
 #% or counter-clockwise. Then, based on which index is large, separate out
 #% inner and outer corridor based on which intercept index is larger. 
-print('start-end index {0}-{1}'.format(iIntStart, iIntEnd))
-print(poly.signedpolyarea(envelope))
 if poly.ispolycw(envelope):
   if iIntStart > iIntEnd:
     outerCorr = np.vstack([envelope[iIntStart:-1,:],envelope[0:iIntEnd,:]])
