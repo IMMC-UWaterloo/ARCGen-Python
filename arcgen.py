@@ -90,15 +90,15 @@
 #################################################################################
 ##### User Input
 #################################################################################
-inputCSV = 'data_incomplete.csv'     # Input Signals CSV File Name
-nResamplePoints = 75     # Number of Resample Points
+inputCSV = 'ExampleCasesAndDatasets/NBDL_15gFrontalDeceleration/NBDL_15gFrontal_HeadZAccel.csv'     # Input Signals CSV File Name
+nResamplePoints = 500     # Number of Resample Points
 Diagnostics = 'on'        # Outputs additional information for diagnostics
 CorridorScaleFact = 1     # Corridor Scale Factor
 NormalizeSignals = 'on'  # Enables Normalization
 EllipseKFact = 1          # Ellipse K Factor
-CorridorRes = 200         # Corridor Resolution
+CorridorRes = 500         # Corridor Resolution
 MinCorridorWidth = 0      # Minimum Corridor Width
-nWarpCtrlPts = 0          # Number of Warping Points
+nWarpCtrlPts = 4          # Number of Warping Points
 WarpingPenalty = 1e-2     # Warping Penalty
 
 
