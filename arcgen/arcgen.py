@@ -100,19 +100,19 @@ import os
 import warnings
 warnings.filterwarnings("ignore")
 
-def arcgen():
+def arcgen(inputDataPath,
+           nResamplePoints = 250,
+           Diagnostics = 'on',
+           NormalizeSignals = 'on',
+           EllipseKFact = 1,
+           CorridorRes = 250,
+           MinCorridorWidth = 0,
+           nWarpCtrlPts = 4,
+           WarpingPenalty = 1e-2):
   #################################################################################
   ##### User Input
   #################################################################################
   inputCSV = 'ExampleCasesAndDatasets/NBDL_15gFrontalDeceleration/NBDL_15gFrontal_HeadZAccel.csv'     # Input Signals CSV File Name
-  nResamplePoints = 250     # Number of Resample Points
-  Diagnostics = 'on'        # Outputs additional information for diagnostics
-  NormalizeSignals = 'on'  # Enables Normalization
-  EllipseKFact = 1          # Ellipse K Factor
-  CorridorRes = 250         # Corridor Resolution
-  MinCorridorWidth = 0      # Minimum Corridor Width
-  nWarpCtrlPts = 4          # Number of Warping Points
-  WarpingPenalty = 1e-2     # Warping Penalty
 
   ##### Creating a directory for results
   if not os.path.exists('results'):
@@ -132,14 +132,16 @@ def arcgen():
   yNormMax = {}
   warpControlPoints = {}
 
-  ## Load from csv. empty values in shorter signals are given as 'nan'
-  dataframe = np.genfromtxt(inputCSV, delimiter=',', encoding=None)
-  numberRows, numberCols = dataframe.shape
-  # Error check
-  if numberCols % 2 == 0:
-    numberSignals = int(numberCols/2)
-  else:
-    raise ValueError("The number of columns in the csv file is not even")    
+  if os.path.isfile(inputCSV):
+    print('This is a file')
+    ## Load from csv. empty values in shorter signals are given as 'nan'
+    dataframe = np.genfromtxt(inputCSV, delimiter=',', encoding=None)
+    numberRows, numberCols = dataframe.shape
+    # Error check
+    if numberCols % 2 == 0:
+      numberSignals = int(numberCols/2)
+    else:
+      raise ValueError("The number of columns in the csv file is not even")    
 
   # Store input signals as list of arrays
   for i in range(len(np.hsplit(dataframe,numberSignals))):
