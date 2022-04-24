@@ -145,11 +145,11 @@ def arcgen(inputDataPath,
 
   # Store input signals as list of arrays
   for i in range(len(np.hsplit(dataframe,numberSignals))):
-      temp = dataframe[:, (2*i):(2*i+2)]
-      # Remove 'nan' entries
-      indexNan = np.logical_not(np.isnan(temp[:,0]))
-      # add to dictionary
-      inputSignals['Signal '+str(i+1)] = temp[indexNan,:]
+    temp = dataframe[:, (2*i):(2*i+2)]
+    # Remove 'nan' entries
+    indexNan = np.logical_not(np.isnan(temp[:,0]))
+    # add to dictionary
+    inputSignals['Signal '+str(i+1)] = temp[indexNan,:]
 
   #%% Compute arclength based on input signal datapoints
   #% Do not perform normalization
@@ -179,62 +179,62 @@ def arcgen(inputDataPath,
 
   #% Perform magnitude normalization based on bounding box
   if NormalizeSignals =='on':
-      #% Determine bounding box of individual signals
-      for iSignal in inputSignals.keys():
-          temp = inputSignals[iSignal]  # Temporary for convenience
+    #% Determine bounding box of individual signals
+    for iSignal in inputSignals.keys():
+      temp = inputSignals[iSignal]  # Temporary for convenience
 
-      #% Determine min[x, y] and max[x, y]data
-          xMin[iSignal], yMin[iSignal] = temp.min(axis=0)
-          xMax[iSignal], yMax[iSignal] = temp.max(axis=0)
+  #% Determine min[x, y] and max[x, y]data
+      xMin[iSignal], yMin[iSignal] = temp.min(axis=0)
+      xMax[iSignal], yMax[iSignal] = temp.max(axis=0)
 
-      xBound = [sum(xMin.values())/len(xMin.values()), sum(xMax.values())/len(xMax.values())]
-      yBound = [sum(yMin.values())/len(yMin.values()), sum(yMax.values())/len(yMax.values())]
+    xBound = [sum(xMin.values())/len(xMin.values()), sum(xMax.values())/len(xMax.values())]
+    yBound = [sum(yMin.values())/len(yMin.values()), sum(yMax.values())/len(yMax.values())]
 
-      # Normalize the axis of each signal, then do arc-length calcs
-      for iSignal in inputSignals.keys():
-          # This needs to be a .copy(), otherwise scaling effects inputSignals 
-          temp = inputSignals[iSignal].copy() # Temporary for convenience
+    # Normalize the axis of each signal, then do arc-length calcs
+    for iSignal in inputSignals.keys():
+      # This needs to be a .copy(), otherwise scaling effects inputSignals 
+      temp = inputSignals[iSignal].copy() # Temporary for convenience
 
 
-          #% Normalize from bounding box to [-1,1]
-          temp[:,0] = temp[:,0] / (xBound[1]-xBound[0])
-          temp[:,1] = temp[:,1] / (yBound[1]-yBound[0])
+      #% Normalize from bounding box to [-1,1]
+      temp[:,0] = temp[:,0] / (xBound[1]-xBound[0])
+      temp[:,1] = temp[:,1] / (yBound[1]-yBound[0])
 
-          # % Compute arc - length between each data point
-          segments = np.sqrt((temp[0:-1, 0] - temp[1:, 0]) ** 2 + (temp[0:-1, 1] - temp[1:, 1])** 2)
-          segments = np.append([0], segments)
+      # % Compute arc - length between each data point
+      segments = np.sqrt((temp[0:-1, 0] - temp[1:, 0]) ** 2 + (temp[0:-1, 1] - temp[1:, 1])** 2)
+      segments = np.append([0], segments)
 
-          # % Append cumulative arc length to data array
-          alen = np.cumsum(segments)
+      # % Append cumulative arc length to data array
+      alen = np.cumsum(segments)
 
-          # % Compute normalized arc - length
-          maxAlen[iSignal] = np.max(alen)
-          inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen))
-          inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen / maxAlen[iSignal]))
+      # % Compute normalized arc - length
+      maxAlen[iSignal] = np.max(alen)
+      inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen))
+      inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen / maxAlen[iSignal]))
 
-          # % Determine max[x, y] data
-          xNormMax[iSignal], yNormMax[iSignal] = temp.max(axis=0)
+      # % Determine max[x, y] data
+      xNormMax[iSignal], yNormMax[iSignal] = temp.max(axis=0)
 
-          # % Remove spurious duplicates
-          temp = inputSignals[iSignal].copy()
-          _, uniqueIndex = np.unique(temp[:, 3], return_index=True)
-          inputSignals[iSignal] = temp[uniqueIndex, :]
+      # % Remove spurious duplicates
+      temp = inputSignals[iSignal].copy()
+      _, uniqueIndex = np.unique(temp[:, 3], return_index=True)
+      inputSignals[iSignal] = temp[uniqueIndex, :]
 
   #% Compute mean and median arc - length deviation
   meanAlen = sum(maxAlen.values())/len(maxAlen.values())
   medianAlen = np.median(np.fromiter(maxAlen.values(), dtype=float))
 
   for iSignal in inputSignals.keys():
-      meanDev[iSignal] = maxAlen[iSignal] - meanAlen
-      medianDevs[iSignal] = maxAlen[iSignal] - medianAlen
+    meanDev[iSignal] = maxAlen[iSignal] - meanAlen
+    medianDevs[iSignal] = maxAlen[iSignal] - medianAlen
 
-      normAlen = np.linspace(0, inputSignals[iSignal][-1, 3], num = nResamplePoints)
+    normAlen = np.linspace(0, inputSignals[iSignal][-1, 3], num = nResamplePoints)
 
-      resampX = interpolate.interp1d(inputSignals[iSignal][:, 3], inputSignals[iSignal][:, 0])(normAlen)
-      resampY = interpolate.interp1d(inputSignals[iSignal][:, 3], inputSignals[iSignal][:, 1])(normAlen)
+    resampX = interpolate.interp1d(inputSignals[iSignal][:, 3], inputSignals[iSignal][:, 0])(normAlen)
+    resampY = interpolate.interp1d(inputSignals[iSignal][:, 3], inputSignals[iSignal][:, 1])(normAlen)
 
-      #% Resulting array is normalized arc - length, resampled x, resam.y
-      normalizedSignal[iSignal] = np.column_stack((normAlen, resampX, resampY))
+    #% Resulting array is normalized arc - length, resampled x, resam.y
+    normalizedSignal[iSignal] = np.column_stack((normAlen, resampX, resampY))
 
   #% % For each resampled point, determine average and standard deviation across signals
   #% Initialize arrays
@@ -242,12 +242,12 @@ def arcgen(inputDataPath,
   stdevData = np.zeros((nResamplePoints, 2))
 
   for iPoints in range(nResamplePoints):
-      temp = np.empty([0, 2])
+    temp = np.empty([0, 2])
 
-      for iSignal in inputSignals.keys():
-          temp = np.vstack((temp, normalizedSignal[iSignal][iPoints,1:3]))
-      charAvg[iPoints,:]= temp.mean(axis=0)
-      stdevData[iPoints,:] = temp.std(axis=0)
+    for iSignal in inputSignals.keys():
+      temp = np.vstack((temp, normalizedSignal[iSignal][iPoints,1:3]))
+    charAvg[iPoints,:]= temp.mean(axis=0)
+    stdevData[iPoints,:] = temp.std(axis=0)
 
   #%% Align normalized arc-length signals based on minimized correlation.
   #% Enabled by option 'nWarpCtrlPts'. If 0, skip alignment.
@@ -410,17 +410,17 @@ def arcgen(inputDataPath,
 
   for iPt in range(CorridorRes-1):  #% Rows (y-axis)
     for jPt in range(CorridorRes-1):   #% Columns (x-axis)
-          # % Cell value definition
-          # %  1 -- 2 
-          # %  |    |
-          # %  |    |
-          # %  8 -- 4
-          # %
-          # % REMEMBER!!!! 
-          # % array(i,j) = array(rows, columns,) = array(y,x)
-          
-          # % By carefully defining cell values and definitions, we can use
-          # % binary to simplify logic though a integer based switch case
+      # % Cell value definition
+      # %  1 -- 2 
+      # %  |    |
+      # %  |    |
+      # %  8 -- 4
+      # %
+      # % REMEMBER!!!! 
+      # % array(i,j) = array(rows, columns,) = array(y,x)
+      
+      # % By carefully defining cell values and definitions, we can use
+      # % binary to simplify logic though a integer based switch case
 
       cellValue = int((1 * (zz[iPt,jPt]>1)) + (2 * (zz[iPt+1,jPt]>1)) + (4 * (zz[iPt+1,jPt+1]>1)) + (8 * (zz[iPt,jPt+1]>1)) + 1)
       
