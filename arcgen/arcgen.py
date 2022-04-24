@@ -99,156 +99,17 @@ from scipy import optimize
 import os
 import warnings
 warnings.filterwarnings("ignore")
-	
-## External Functions
-#%% Function used to evaluate correlation score between signals
-def evalCorrScore(signalsX, signalsY):
-  #% Correlation score taken from the work of Nusholtz et al. (2009)
-  #% Compute cross-correlation matrix of all signals to each other
-  corrMatX = np.corrcoef(signalsX, rowvar=False)
-  corrMatY = np.corrcoef(signalsY, rowvar=False)
-  
-  #% Convert matrices to a single score
-  nSignal = len(corrMatX)
-  corrScoreX = (1/(nSignal*(nSignal-1)))*(np.sum(np.sum(corrMatX))-nSignal)
-  corrScoreY = (1/(nSignal*(nSignal-1)))*(np.sum(np.sum(corrMatY))-nSignal)
-  
-  #% Compute a single metric for optimization purposes. Using simple mean
-  meanCorrScore = 0.5*(corrScoreX+corrScoreY)
-  corrScoreArray = np.column_stack((corrScoreX, corrScoreY))
-  return meanCorrScore, corrScoreArray
-
-
-#%% Function used to compute objective for optimization
-def warpingObjective(optimWarp,nCtrlPts,inputSignals,WarpingPenalty,nResamplePoints):
-  #% Control points are equally spaced in arc-length.
-  #% optimwarp is a column vector with first warped control point in the
-  #% first nSignal indices, then 2nd control point in the next nSignal indices
-  nSignal = len(inputSignals)
-  warpArray = optimWarp.reshape((2*nSignal, nCtrlPts), order='F')
-  
-  #% Compute a warping penalty
-  penaltyScore = warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal)
-  penaltyScore = np.mean(penaltyScore, axis=0)
-
-  # % Perform warping
-  _, signalsX, signalsY = warpArcLength(warpArray, inputSignals, nResamplePoints)
-  
-  #% Compute correlation score
-  corrScore, _ = evalCorrScore(signalsX, signalsY)
-  
-  #% corrScore is a maximization goal. Turn into a minimization goal
-  optScore = 1-corrScore+penaltyScore
-  return optScore
-
-
-#%% Function used to warp arc-length function
-def warpArcLength(warpArray, inputSignals, nResamplePoints):
-
-  #% Warp array: each row is warping points for an input signal, each column
-  #% is warped point. Control points are interpolated  on [0,1] assuming
-  #% equal spacing.
-  nSignal = len(inputSignals)
-
-  #% Initialize matrices
-  signalsX = np.zeros((nResamplePoints, nSignal))
-  signalsY = np.zeros((nResamplePoints, nSignal))
-  warpedSignals = {}
-  
-  for iSignal, keys in enumerate(inputSignals):
-    signal = inputSignals[keys]
-    lmCtrlPts = np.concatenate([[0], warpArray[iSignal + nSignal, :], [1]])
-
-    #% prepend 0 and append 1 to warp points for this signal to create valid
-    #% control points.
-    warpedCtrlPts = np.concatenate([[0], warpArray[iSignal,:], [1]])
-
-    #% Construct warping function using SLM. This warps lmAlen to shiftAlen.
-    #% Use warping fuction to map computed arc-lengths onto the shifted
-    #% system. use built-in pchip function. This is a peicewise monotonic
-    #% cubic spline. Signifincantly faster than SLM.
-    warpedNormAlen = interpolate.pchip(lmCtrlPts,warpedCtrlPts)(signal[:,3])
-
-    #% Now uniformly resample normalzied arc-length
-    resamNormwarpedAlen = np.linspace(0, 1, num = nResamplePoints)
-    resampX = interpolate.interp1d(warpedNormAlen, signal[:, 0], kind='linear', fill_value="extrapolate")(resamNormwarpedAlen)
-    resampY = interpolate.interp1d(warpedNormAlen, signal[:, 1], kind='linear', fill_value="extrapolate")(resamNormwarpedAlen)
-
-    #% Assign to array for correlation calc
-    signalsX[:, iSignal] = resampX
-    signalsY[:, iSignal] = resampY
-
-    #% Assemble a cell array containing arrays of resampled signals. Similar
-    #% to 'normalizedSignal' in 'inputSignals' structure
-    warpedSignals[keys] = np.column_stack((resamNormwarpedAlen, resampX, resampY))
-  
-  return warpedSignals, signalsX, signalsY
-
-
-#%% Penalty function to prevent plateaus and extreme divergence in warping functions
-def warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal):
-#% Compute an array of penalty scores based on MSE between linear, unwarped
-#% arc-length and warped arc-length. Aim is to help prevent plateauing.
-  nSignals = nSignal
-
-  penaltyScores = np.zeros((nSignals));
-  unwarpedAlen = np.linspace(0, 1, num = nResamplePoints);
-  
-  for iSignal in range(nSignals):
-    interpX = np.concatenate([[0],warpArray[iSignal+nSignals,:],[1]], axis=None, dtype='float')
-    interpY = np.concatenate([[0],warpArray[iSignal,:],[1]], axis=None, dtype='float')
-    interpResults = interpolate.pchip(interpX, interpY, axis=0)(unwarpedAlen)
-    penaltyScores[iSignal] = np.sum(((unwarpedAlen - interpResults)**2))
-  
-  penaltyScores = WarpingPenalty * penaltyScores
-
-  return penaltyScores
-
-
-#%% helper function to perform linear interpolation to an isovalue of 1 only
-def interpIso(x1, y1, x2, y2):
-  val = x1+(x2-x1)*(1-y1)/(y2-y1)  
-  return val
-
-def interpLin(x1, y1, x2,  y2, xq):
-  return y1 + (xq-x1)*(y2-y1)/(x2-x1)
-
-
-#%% returns  indices and values of nonzero elements
-def find(array, string = None):
-  #making sure that a np array is used
-  array = np.array(array)
-  n = array.ndim
-  if n ==0:
-    return []
-  elif n == 1:
-    result = np.argwhere(array)
-  elif n == 2:
-    array1d = array.ravel(order='F')
-    result = np.argwhere(array1d)
-  else:
-    raise ValueError("Array dimensions not supported")
-
-  if string == 'first' and result.size != 0:
-    return np.sort(result, axis = None)[0]
-
-  elif string == 'last' and result.size != 0:
-    return np.sort(result, axis = None)[-1]
-
-  else:
-    return np.array(result).astype(int)
 
 def arcgen():
   #################################################################################
   ##### User Input
   #################################################################################
   inputCSV = 'ExampleCasesAndDatasets/NBDL_15gFrontalDeceleration/NBDL_15gFrontal_HeadZAccel.csv'     # Input Signals CSV File Name
-  nResamplePoints = 500     # Number of Resample Points
+  nResamplePoints = 250     # Number of Resample Points
   Diagnostics = 'on'        # Outputs additional information for diagnostics
-  CorridorScaleFact = 1     # Corridor Scale Factor
   NormalizeSignals = 'on'  # Enables Normalization
   EllipseKFact = 1          # Ellipse K Factor
-  CorridorRes = 500         # Corridor Resolution
+  CorridorRes = 250         # Corridor Resolution
   MinCorridorWidth = 0      # Minimum Corridor Width
   nWarpCtrlPts = 4          # Number of Warping Points
   WarpingPenalty = 1e-2     # Warping Penalty
@@ -849,8 +710,6 @@ def arcgen():
   #% To divide inner or outer corridors, first determine if polygon is clockwise
   #% or counter-clockwise. Then, based on which index is large, separate out
   #% inner and outer corridor based on which intercept index is larger. 
-  print(poly.signedpolyarea(envelope))
-  print(poly.ispolycw(envelope))
   if poly.ispolycw(envelope):
     if iIntStart > iIntEnd:
       outerCorr = np.vstack([envelope[iIntStart:,:],envelope[:iIntEnd,:]])
@@ -939,4 +798,141 @@ def arcgen():
   # Display a figure.
   fig.savefig('results/ARCGen - Corridors and Signal Avg.png')
   print('ARCGen has successfully processed the input signals and the results are stored in the results directory')
+	
+## External Functions
+#%% Function used to evaluate correlation score between signals
+def evalCorrScore(signalsX, signalsY):
+  #% Correlation score taken from the work of Nusholtz et al. (2009)
+  #% Compute cross-correlation matrix of all signals to each other
+  corrMatX = np.corrcoef(signalsX, rowvar=False)
+  corrMatY = np.corrcoef(signalsY, rowvar=False)
+  
+  #% Convert matrices to a single score
+  nSignal = len(corrMatX)
+  corrScoreX = (1/(nSignal*(nSignal-1)))*(np.sum(np.sum(corrMatX))-nSignal)
+  corrScoreY = (1/(nSignal*(nSignal-1)))*(np.sum(np.sum(corrMatY))-nSignal)
+  
+  #% Compute a single metric for optimization purposes. Using simple mean
+  meanCorrScore = 0.5*(corrScoreX+corrScoreY)
+  corrScoreArray = np.column_stack((corrScoreX, corrScoreY))
+  return meanCorrScore, corrScoreArray
 
+
+#%% Function used to compute objective for optimization
+def warpingObjective(optimWarp,nCtrlPts,inputSignals,WarpingPenalty,nResamplePoints):
+  #% Control points are equally spaced in arc-length.
+  #% optimwarp is a column vector with first warped control point in the
+  #% first nSignal indices, then 2nd control point in the next nSignal indices
+  nSignal = len(inputSignals)
+  warpArray = optimWarp.reshape((2*nSignal, nCtrlPts), order='F')
+  
+  #% Compute a warping penalty
+  penaltyScore = warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal)
+  penaltyScore = np.mean(penaltyScore, axis=0)
+
+  # % Perform warping
+  _, signalsX, signalsY = warpArcLength(warpArray, inputSignals, nResamplePoints)
+  
+  #% Compute correlation score
+  corrScore, _ = evalCorrScore(signalsX, signalsY)
+  
+  #% corrScore is a maximization goal. Turn into a minimization goal
+  optScore = 1-corrScore+penaltyScore
+  return optScore
+
+
+#%% Function used to warp arc-length function
+def warpArcLength(warpArray, inputSignals, nResamplePoints):
+
+  #% Warp array: each row is warping points for an input signal, each column
+  #% is warped point. Control points are interpolated  on [0,1] assuming
+  #% equal spacing.
+  nSignal = len(inputSignals)
+
+  #% Initialize matrices
+  signalsX = np.zeros((nResamplePoints, nSignal))
+  signalsY = np.zeros((nResamplePoints, nSignal))
+  warpedSignals = {}
+  
+  for iSignal, keys in enumerate(inputSignals):
+    signal = inputSignals[keys]
+    lmCtrlPts = np.concatenate([[0], warpArray[iSignal + nSignal, :], [1]])
+
+    #% prepend 0 and append 1 to warp points for this signal to create valid
+    #% control points.
+    warpedCtrlPts = np.concatenate([[0], warpArray[iSignal,:], [1]])
+
+    #% Construct warping function using SLM. This warps lmAlen to shiftAlen.
+    #% Use warping fuction to map computed arc-lengths onto the shifted
+    #% system. use built-in pchip function. This is a peicewise monotonic
+    #% cubic spline. Signifincantly faster than SLM.
+    warpedNormAlen = interpolate.pchip(lmCtrlPts,warpedCtrlPts)(signal[:,3])
+
+    #% Now uniformly resample normalzied arc-length
+    resamNormwarpedAlen = np.linspace(0, 1, num = nResamplePoints)
+    resampX = interpolate.interp1d(warpedNormAlen, signal[:, 0], kind='linear', fill_value="extrapolate")(resamNormwarpedAlen)
+    resampY = interpolate.interp1d(warpedNormAlen, signal[:, 1], kind='linear', fill_value="extrapolate")(resamNormwarpedAlen)
+
+    #% Assign to array for correlation calc
+    signalsX[:, iSignal] = resampX
+    signalsY[:, iSignal] = resampY
+
+    #% Assemble a cell array containing arrays of resampled signals. Similar
+    #% to 'normalizedSignal' in 'inputSignals' structure
+    warpedSignals[keys] = np.column_stack((resamNormwarpedAlen, resampX, resampY))
+  
+  return warpedSignals, signalsX, signalsY
+
+
+#%% Penalty function to prevent plateaus and extreme divergence in warping functions
+def warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal):
+#% Compute an array of penalty scores based on MSE between linear, unwarped
+#% arc-length and warped arc-length. Aim is to help prevent plateauing.
+  nSignals = nSignal
+
+  penaltyScores = np.zeros((nSignals));
+  unwarpedAlen = np.linspace(0, 1, num = nResamplePoints);
+  
+  for iSignal in range(nSignals):
+    interpX = np.concatenate([[0],warpArray[iSignal+nSignals,:],[1]], axis=None, dtype='float')
+    interpY = np.concatenate([[0],warpArray[iSignal,:],[1]], axis=None, dtype='float')
+    interpResults = interpolate.pchip(interpX, interpY, axis=0)(unwarpedAlen)
+    penaltyScores[iSignal] = np.sum(((unwarpedAlen - interpResults)**2))
+  
+  penaltyScores = WarpingPenalty * penaltyScores
+
+  return penaltyScores
+
+
+#%% helper function to perform linear interpolation to an isovalue of 1 only
+def interpIso(x1, y1, x2, y2):
+  val = x1+(x2-x1)*(1-y1)/(y2-y1)  
+  return val
+
+def interpLin(x1, y1, x2,  y2, xq):
+  return y1 + (xq-x1)*(y2-y1)/(x2-x1)
+
+
+#%% returns  indices and values of nonzero elements
+def find(array, string = None):
+  #making sure that a np array is used
+  array = np.array(array)
+  n = array.ndim
+  if n ==0:
+    return []
+  elif n == 1:
+    result = np.argwhere(array)
+  elif n == 2:
+    array1d = array.ravel(order='F')
+    result = np.argwhere(array1d)
+  else:
+    raise ValueError("Array dimensions not supported")
+
+  if string == 'first' and result.size != 0:
+    return np.sort(result, axis = None)[0]
+
+  elif string == 'last' and result.size != 0:
+    return np.sort(result, axis = None)[-1]
+
+  else:
+    return np.array(result).astype(int)
