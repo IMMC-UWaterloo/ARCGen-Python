@@ -97,6 +97,7 @@ from matplotlib.patches import Ellipse
 from scipy import interpolate
 from scipy import optimize
 import os
+from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -109,14 +110,10 @@ def arcgen(inputDataPath,
            MinCorridorWidth = 0,
            nWarpCtrlPts = 4,
            WarpingPenalty = 1e-2):
-  #################################################################################
-  ##### User Input
-  #################################################################################
-  inputCSV = 'ExampleCasesAndDatasets/NBDL_15gFrontalDeceleration/NBDL_15gFrontal_HeadZAccel.csv'     # Input Signals CSV File Name
 
-  ##### Creating a directory for results
+  # Creating a directory for results
   if not os.path.exists('results'):
-      os.makedirs('results')
+    os.makedirs('results')
 
   # Declarations, as dictionaries
   inputSignals ={}
@@ -132,16 +129,17 @@ def arcgen(inputDataPath,
   yNormMax = {}
   warpControlPoints = {}
 
-  if os.path.isfile(inputCSV):
-    print('This is a file')
-    ## Load from csv. empty values in shorter signals are given as 'nan'
-    dataframe = np.genfromtxt(inputCSV, delimiter=',', encoding=None)
+  if Path(inputDataPath).exists():
+    # Load from csv. empty values in shorter signals are given as 'nan'
+    dataframe = np.genfromtxt(inputDataPath, delimiter=',', encoding=None)
     numberRows, numberCols = dataframe.shape
     # Error check
     if numberCols % 2 == 0:
       numberSignals = int(numberCols/2)
     else:
       raise ValueError("The number of columns in the csv file is not even")    
+  else:
+    raise ValueError("inputData format is not valid. Only valid paths or tuples") 
 
   # Store input signals as list of arrays
   for i in range(len(np.hsplit(dataframe,numberSignals))):
@@ -154,28 +152,27 @@ def arcgen(inputDataPath,
   #%% Compute arclength based on input signal datapoints
   #% Do not perform normalization
   if NormalizeSignals == 'off':
-      for iSignal in inputSignals.keys():
+    for iSignal in inputSignals.keys():
+      temp = inputSignals[iSignal].copy() # Temporary for convenience
 
-          temp = inputSignals[iSignal].copy() # Temporary for convenience
+      # Compute arc - length between each data point
+      segments = np.sqrt((temp[0:-1,0] - temp[1:,0])**2 + (temp[0:-1, 1] - temp[1:, 1])**2)
+      segments = np.append([0], segments)
 
-          # Compute arc - length between each data point
-          segments = np.sqrt((temp[0:-1,0] - temp[1:,0])**2 + (temp[0:-1, 1] - temp[1:, 1])**2)
-          segments = np.append([0], segments)
+      #% Append cumulative arc length to data array
+      alen = np.cumsum(segments)
 
-          #% Append cumulative arc length to data array
-          alen = np.cumsum(segments)
+      #% Compute normalized arc - length
+      maxAlen[iSignal] = np.max(alen)
+      inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen))
+      inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen/maxAlen[iSignal]))
 
-          #% Compute normalized arc - length
-          maxAlen[iSignal] = np.max(alen)
-          inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen))
-          inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen/maxAlen[iSignal]))
+      #% Determine max[x, y] data
+      xMax[iSignal], yMax[iSignal] = temp.max(axis=0)
 
-          #% Determine max[x, y] data
-          xMax[iSignal], yMax[iSignal] = temp.max(axis=0)
-
-          #% Remove spurious duplicates
-          _,idx=np.unique(inputSignals[iSignal], axis=0,return_index=True)
-          inputSignals[iSignal][np.sort(idx)]
+      #% Remove spurious duplicates
+      _,idx=np.unique(inputSignals[iSignal], axis=0,return_index=True)
+      inputSignals[iSignal][np.sort(idx)]
 
   #% Perform magnitude normalization based on bounding box
   if NormalizeSignals =='on':
@@ -194,7 +191,6 @@ def arcgen(inputDataPath,
     for iSignal in inputSignals.keys():
       # This needs to be a .copy(), otherwise scaling effects inputSignals 
       temp = inputSignals[iSignal].copy() # Temporary for convenience
-
 
       #% Normalize from bounding box to [-1,1]
       temp[:,0] = temp[:,0] / (xBound[1]-xBound[0])
@@ -390,10 +386,8 @@ def arcgen(inputDataPath,
   for iPt in range(nRes):
     for jPt in range(nRes):
       zz[iPt,jPt] = np.max(
-          (((xx[iPt,jPt] - charAvg[:,0])**2 / (stdevData[:,0]*kFact)**2 + (yy[iPt,jPt] - charAvg[:,1])**2 / (stdevData[:,1]*kFact)**2)**-1)
-                          )
+          (((xx[iPt,jPt] - charAvg[:,0])**2 / (stdevData[:,0]*kFact)**2 + (yy[iPt,jPt] - charAvg[:,1])**2 / (stdevData[:,1]*kFact)**2)**-1))
       
-
   # % The following segments is the marching squares algorith. The goal of this
   # % algorithm is to find the zz=1 isoline, as this represents the outer
   # % boundary of all elllipses. 
