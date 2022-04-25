@@ -104,17 +104,19 @@ warnings.filterwarnings("ignore")
 
 def arcgen(inputDataPath,
            nResamplePoints = 250,
-           Diagnostics = 'on',
+           Diagnostics = 'off',
            NormalizeSignals = 'on',
            EllipseKFact = 1,
            CorridorRes = 250,
            MinCorridorWidth = 0,
            nWarpCtrlPts = 4,
-           WarpingPenalty = 1e-2):
+           WarpingPenalty = 1e-2,
+           resultsToFile = False):
 
   # Creating a directory for results
-  if not os.path.exists('results'):
-    os.makedirs('results')
+  if (Diagnostics == 'on') or (Diagnostics == 'detailed') or (resultsToFile):
+    if not os.path.exists('outputs'):
+      os.makedirs('outputs')
 
   # Declarations, as dictionaries
   inputSignals ={}
@@ -375,7 +377,7 @@ def arcgen(inputDataPath,
     fig.tight_layout()
     fig.subplots_adjust(top=0.91)
     ax[0][0].legend(loc='lower right')
-    fig.savefig('results/Normalization and Warping.png')
+    fig.savefig('outputs/Normalization and Warping.png')
 
   #%% Begin marching squares algorithm
   #% Create grids based on upper and lower of characteristic average plus 120%
@@ -741,15 +743,15 @@ def arcgen(inputDataPath,
 
 
   #%% Draw extension lines and sampling points to MS plot
-  if Diagnostics == 'on':
+  if (Diagnostics == 'detailed'):
     figd, axd = plt.subplots(1, 2, figsize = (12,4), dpi = 1200)
     axd[0].plot(charAvg[:,0], charAvg[:,1], label= 'Char Avg', c = 'black')
     ellipse_xy = list(zip(charAvg[:,0], charAvg[:,1]))
     for iPoint in range(nResamplePoints):
       ellipse = Ellipse(ellipse_xy[iPoint], stdevData[iPoint,0] * EllipseKFact*2, stdevData[iPoint,1] * EllipseKFact*2, angle = 0, edgecolor='grey', lw=0.6, facecolor='none')
       axd[0].add_artist(ellipse)
-    # for iSignal in inputSignals.keys():
-    #   axd[0].plot(inputSignals[iSignal][:,0], inputSignals[iSignal][:,1], label = iSignal)
+    for iSignal in inputSignals.keys():
+      axd[0].plot(inputSignals[iSignal][:,0], inputSignals[iSignal][:,1], label = iSignal)
     axd[0].plot(closedEnvelope[:,0], closedEnvelope[:,1], c = 'darkgreen', linewidth=0.5)
 
     axd[0].title.set_text('Char Avg and Ellipses')
@@ -760,40 +762,39 @@ def arcgen(inputDataPath,
     axd[1].scatter(xx[:],yy[:], 0.25, zz[:]>=1, )
     axd[1].title.set_text('Corridor Extraction')
     axd[1].set(xlabel='x-data', ylabel='y-data')
-    figd.savefig('results/Diagnostics.png')
+    figd.savefig('outputs/DetailedDiagnostics.png')
 
   # print average and corridors to .csv file
-  output = np.column_stack([charAvg,innerCorr,outerCorr])
-  fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
-  np.savetxt("results/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
+  if resultsToFile:
+    output = np.column_stack([charAvg,innerCorr,outerCorr])
+    fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
+    np.savetxt("outputs/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
+    fig = plt.figure(figsize= (6,4), dpi=1200)
+    if NormalizeSignals == 'on':
+      for iSignal in inputSignals.keys():
+        #% Resulting array is normalized arc - length, resampled x, resam.y
+        plt.plot(normalizedSignal[iSignal][:,1], normalizedSignal[iSignal][:,2], label = 'Input Signals', c ='grey', lw=1)
+      plt.title('ArcGen - Normalization')
+    else:
+      for iSignal in inputSignals.keys():
 
+        plt.plot(inputSignals[iSignal][:,0], inputSignals[iSignal][:,1], label = 'Input Signals', c = 'grey', lw = 1)
+      plt.title('ArcGen - No Normalization')
 
-  fig = plt.figure(figsize= (6,4), dpi=1200)
-  if NormalizeSignals == 'on':
-    for iSignal in inputSignals.keys():
-      #% Resulting array is normalized arc - length, resampled x, resam.y
-      plt.plot(normalizedSignal[iSignal][:,1], normalizedSignal[iSignal][:,2], label = 'Input Signals', c ='grey', lw=1)
-    plt.title('ArcGen - Normalization')
-  else:
-    for iSignal in inputSignals.keys():
-
-      plt.plot(inputSignals[iSignal][:,0], inputSignals[iSignal][:,1], label = 'Input Signals', c = 'grey', lw = 1)
-    plt.title('ArcGen - No Normalization')
-
-  plt.plot(charAvg[:,0], charAvg[:,1], label = 'Average - ARCGen', c ='black', lw = 1.5)
-  plt.plot(innerCorr[:,0], innerCorr[:,1], label = 'Inner Corridors', c='gold', lw = 1.5)
-  plt.plot(outerCorr[:,0], outerCorr[:,1], label = 'Outer Corridors', c ='goldenrod', lw = 1.5)
-  handles, labels = plt.gca().get_legend_handles_labels()
-  labels, ids = np.unique(labels, return_index=True)
-  handles = [handles[i] for i in ids]
-  fig.legend(handles, labels)
-  plt.xlabel('x - axis')
-  # Set the y axis label of the current axis.
-  plt.ylabel('y - axis')
-  # Set a title of the current axes.
-  # show a legend on the plot
-  # Display a figure.
-  fig.savefig('results/ARCGen - Corridors and Signal Avg.png')
+    plt.plot(charAvg[:,0], charAvg[:,1], label = 'Average - ARCGen', c ='black', lw = 1.5)
+    plt.plot(innerCorr[:,0], innerCorr[:,1], label = 'Inner Corridors', c='gold', lw = 1.5)
+    plt.plot(outerCorr[:,0], outerCorr[:,1], label = 'Outer Corridors', c ='goldenrod', lw = 1.5)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    labels, ids = np.unique(labels, return_index=True)
+    handles = [handles[i] for i in ids]
+    fig.legend(handles, labels)
+    plt.xlabel('x - axis')
+    # Set the y axis label of the current axis.
+    plt.ylabel('y - axis')
+    # Set a title of the current axes.
+    # show a legend on the plot
+    # Display a figure.
+    fig.savefig('outputs/ARCGen - Corridors and Signal Avg.png')
 
   # Create output of processed signals
   processedSignals = []
@@ -819,7 +820,6 @@ def arcgen(inputDataPath,
     "warpedMeanCorrScore": warpedMeanCorrScore,
   }
 
-  print('ARCGen has successfully processed the input signals and the results are stored in the results directory')
   return charAvg, innerCorr, outerCorr, processedSignals, debugData
 	
 ## External Functions
