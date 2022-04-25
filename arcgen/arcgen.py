@@ -102,7 +102,7 @@ from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
 
-def arcgen(inputDataPath,
+def arcgen(inputData,
            nResamplePoints = 250,
            Diagnostics = 'off',
            NormalizeSignals = 'on',
@@ -119,6 +119,7 @@ def arcgen(inputDataPath,
       os.makedirs('outputs')
 
   # Declarations, as dictionaries
+  # TODO Replace pure dictionaries with list of dictionaries. 
   inputSignals ={}
   maxAlen = {}
   meanDev = {}
@@ -132,25 +133,29 @@ def arcgen(inputDataPath,
   yNormMax = {}
   warpControlPoints = {}
 
-  if Path(inputDataPath).exists():
+  if isinstance(inputData, str):
     # Load from csv. empty values in shorter signals are given as 'nan'
-    dataframe = np.genfromtxt(inputDataPath, delimiter=',', encoding=None)
+    dataframe = np.genfromtxt(inputData, delimiter=',', encoding=None)
     numberRows, numberCols = dataframe.shape
     # Error check
     if numberCols % 2 == 0:
       numberSignals = int(numberCols/2)
     else:
       raise ValueError("The number of columns in the csv file is not even")    
-  else:
-    raise ValueError("inputData format is not valid. Only valid paths or tuples") 
 
-  # Store input signals as list of arrays
-  for i in range(len(np.hsplit(dataframe,numberSignals))):
-    temp = dataframe[:, (2*i):(2*i+2)]
-    # Remove 'nan' entries
-    indexNan = np.logical_not(np.isnan(temp[:,0]))
-    # add to dictionary
-    inputSignals['Signal '+str(i+1)] = temp[indexNan,:]
+    # Store input signals as list of arrays
+    for iSig in range(len(np.hsplit(dataframe,numberSignals))):
+      temp = dataframe[:, (2*iSig):(2*iSig+2)]
+      # Remove 'nan' entries
+      indexNan = np.logical_not(np.isnan(temp[:,0]))
+      # add to dictionary
+      inputSignals['Signal '+str(iSig+1)] = temp[indexNan,:]
+  elif isinstance(inputData, list):
+    numberSignals = len(inputData)
+    for iSig in range(len(inputData)):
+      inputSignals['Signal '+str(iSig+1)] = inputData[iSig]
+  else:
+    raise ValueError('Input is not a path or or correctly formatted')
 
   #%% Compute arclength based on input signal datapoints
   #% Do not perform normalization
@@ -801,12 +806,12 @@ def arcgen(inputDataPath,
   for key in inputSignals.keys():
     if nWarpCtrlPts > 0:
       tempDict = {
-        "resampledSignals": normalizedSignal[key],
+        "resampledSignal": normalizedSignal[key],
         "warpControlPoints": warpControlPoints[key],
       }
     else:
       tempDict = {
-        "resampledSignals": normalizedSignal[key],
+        "resampledSignal": normalizedSignal[key],
       }
     processedSignals.append(tempDict)
 
@@ -823,7 +828,7 @@ def arcgen(inputDataPath,
   return charAvg, innerCorr, outerCorr, processedSignals, debugData
 	
 ## External Functions
-#%% Function used to evaluate correlation score between signals
+##%% Function used to evaluate correlation score between signals
 def evalCorrScore(signalsX, signalsY):
   #% Correlation score taken from the work of Nusholtz et al. (2009)
   #% Compute cross-correlation matrix of all signals to each other
