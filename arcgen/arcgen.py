@@ -88,8 +88,9 @@
 
 
 ## Modules
+from statistics import stdev
 import numpy as np
-from numpy import inf
+from numpy import inf, inner
 import arcgen.polygonFunctions as poly
 from arcgen.uniquetol import uniquetol
 import matplotlib.pyplot as plt
@@ -270,8 +271,9 @@ def arcgen(inputDataPath,
       ub = 0.85 * np.ones((nSignal*2))
       A = []
       b = []
+      linConstraints = []
     elif nWarp >= 15:
-      print('Specifying more than 10 interior warping points is not supported')
+      raise ValueError('Specifying more than 10 interior warping points is not supported')
     else:
       x0 = np.zeros((nWarp * (nSignal * 2)))
 
@@ -288,10 +290,11 @@ def arcgen(inputDataPath,
         for iWarp in range(nWarp-1):
           A[iSignal + (iWarp) * (nSignal * 2), iSignal + ((iWarp) * (nSignal * 2))] = 1
           A[iSignal + (iWarp) * (nSignal * 2), iSignal + ((iWarp+1) * (nSignal * 2))] = -1
+      
+      linConstraints = optimize.LinearConstraint(A, -np.inf *np.ones(((nWarp-1) * (nSignal * 2))), b)
     
     #% Execute optimization and compute warped signals
     bounds = list(zip(lb, ub))
-    linConstraints = optimize.LinearConstraint(A, -np.inf *np.ones(((nWarp-1) * (nSignal * 2))), b)
     optWarpArrayX = optimize.minimize(warpingObjective, x0, args=(nWarp,inputSignals, WarpingPenalty,nResamplePoints), method = 'SLSQP', bounds=bounds, options={ 'disp': False}, constraints=linConstraints)
     optWarpArray =optWarpArrayX.x
     optWarpArray = optWarpArray.reshape((nSignal*2,nWarp), order='F')
@@ -313,7 +316,7 @@ def arcgen(inputDataPath,
       tempRow1 = np.concatenate([[0],optWarpArray[iSignal+nSignal,:],[1]])
       tempRow2 = np.concatenate([[0],optWarpArray[iSignal,:],[1]])
       warpControlPoints[keys] = np.concatenate([[tempRow1], [tempRow2]])
-
+      
     for iPoints in range(nResamplePoints):
       temp = np.empty((nSignal, 2)) #% probably cleaner way to do this.
       for iSignal, keys in enumerate(inputSignals):
@@ -596,7 +599,6 @@ def arcgen(inputDataPath,
     #% If we did not find an index, we either may have an open envelope or
     #% envelope may be convex and loops back on itself. 
     elif foundShiftedInd.size == 0:
-
       #% Check to see if we can find the first vertex in envelope
       #% appearing again (check for closure)
       vertConn_ = allEnvelopes[nEnvelopes,0].astype(int)
@@ -760,8 +762,7 @@ def arcgen(inputDataPath,
     axd[1].set(xlabel='x-data', ylabel='y-data')
     figd.savefig('results/Diagnostics.png')
 
-  # Output
-
+  # print average and corridors to .csv file
   output = np.column_stack([charAvg,innerCorr,outerCorr])
   fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
   np.savetxt("results/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
@@ -793,7 +794,33 @@ def arcgen(inputDataPath,
   # show a legend on the plot
   # Display a figure.
   fig.savefig('results/ARCGen - Corridors and Signal Avg.png')
+
+  # Create output of processed signals
+  processedSignals = []
+  for key in inputSignals.keys():
+    if nWarpCtrlPts > 0:
+      tempDict = {
+        "resampledSignals": normalizedSignal[key],
+        "warpControlPoints": warpControlPoints[key],
+      }
+    else:
+      tempDict = {
+        "resampledSignals": normalizedSignal[key],
+      }
+    processedSignals.append(tempDict)
+
+  # Create debug dictionary
+  debugData = {
+    "charAvg": charAvg,
+    "stDev": stdev,
+    "preWarpCorrArray": preWarpCorrArray,
+    "preWarpMeanCorr": preWarpCorrArray,
+    "warpedCorrArray": warpedCorrArray,
+    "warpedMeanCorrScore": warpedMeanCorrScore,
+  }
+
   print('ARCGen has successfully processed the input signals and the results are stored in the results directory')
+  return charAvg, innerCorr, outerCorr, processedSignals, debugData
 	
 ## External Functions
 #%% Function used to evaluate correlation score between signals
