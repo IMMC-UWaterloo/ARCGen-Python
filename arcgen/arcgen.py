@@ -90,7 +90,7 @@
 ## Modules
 from statistics import stdev
 import numpy as np
-from numpy import inf, inner
+from numpy import inf
 import arcgen.polygonFunctions as poly
 from arcgen.uniquetol import uniquetol
 import matplotlib.pyplot as plt
@@ -98,7 +98,6 @@ from matplotlib.patches import Ellipse
 from scipy import interpolate
 from scipy import optimize
 import os
-from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -118,20 +117,9 @@ def arcgen(inputData,
     if not os.path.exists('outputs'):
       os.makedirs('outputs')
 
-  # Declarations, as dictionaries
-  # TODO Replace pure dictionaries with list of dictionaries. 
-  inputSignals ={}
-  maxAlen = {}
-  meanDev = {}
-  medianDevs = {}
-  normalizedSignal = {}
-  xMax = {}
-  xMin = {}
-  yMax = {}
-  yMin = {}
-  xNormMax = {}
-  yNormMax = {}
-  warpControlPoints = {}
+  # Create 'inputSignals' as a variable of convenience to keep track of all
+  # pertenant data. Will consist of a list of dictionaries. 
+  inputSignals = []
 
   if isinstance(inputData, str):
     # Load from csv. empty values in shorter signals are given as 'nan'
@@ -139,29 +127,31 @@ def arcgen(inputData,
     numberRows, numberCols = dataframe.shape
     # Error check
     if numberCols % 2 == 0:
-      numberSignals = int(numberCols/2)
+      nSignal = int(numberCols/2)
     else:
       raise ValueError("The number of columns in the csv file is not even")    
 
     # Store input signals as list of arrays
-    for iSig in range(len(np.hsplit(dataframe,numberSignals))):
+    for iSig in range(nSignal):
       temp = dataframe[:, (2*iSig):(2*iSig+2)]
       # Remove 'nan' entries
       indexNan = np.logical_not(np.isnan(temp[:,0]))
       # add to dictionary
-      inputSignals['Signal '+str(iSig+1)] = temp[indexNan,:]
+      inputSignals.append({'data': temp[temp,:], 
+        'specId': 'Signal '+str(iSig+1) })
   elif isinstance(inputData, list):
-    numberSignals = len(inputData)
+    nSignal = len(inputData)
     for iSig in range(len(inputData)):
-      inputSignals['Signal '+str(iSig+1)] = inputData[iSig]
+      inputSignals.append({'data': inputData[iSig], 
+        'specId': 'Signal '+str(iSig+1)})
   else:
     raise ValueError('Input is not a path or or correctly formatted')
 
   #%% Compute arclength based on input signal datapoints
   #% Do not perform normalization
   if NormalizeSignals == 'off':
-    for iSignal in inputSignals.keys():
-      temp = inputSignals[iSignal].copy() # Temporary for convenience
+    for signal in inputSignals:
+      temp = signal['data'].copy()  # Temporary for convenience
 
       # Compute arc - length between each data point
       segments = np.sqrt((temp[0:-1,0] - temp[1:,0])**2 + (temp[0:-1, 1] - temp[1:, 1])**2)
@@ -171,34 +161,35 @@ def arcgen(inputData,
       alen = np.cumsum(segments)
 
       #% Compute normalized arc - length
-      maxAlen[iSignal] = np.max(alen)
-      inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen))
-      inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen/maxAlen[iSignal]))
+      signal['maxAlen'] = alen[-1]
+      signal['data'] = np.column_stack((signal['data'], alen))
+      signal['data'] = np.column_stack((signal['data'], alen/signal['maxAlen']))
 
       #% Determine max[x, y] data
-      xMax[iSignal], yMax[iSignal] = temp.max(axis=0)
+      signal['xMax'], signal['yMax'] = temp.max(axis=0)
 
       #% Remove spurious duplicates
-      _,idx=np.unique(inputSignals[iSignal], axis=0,return_index=True)
-      inputSignals[iSignal][np.sort(idx)]
+      _,uniqueIndex = np.unique(signal['data'][:,3], axis=0, return_index=True)
+      signal['data'] = signal['data'][uniqueIndex,:]
 
   #% Perform magnitude normalization based on bounding box
   if NormalizeSignals =='on':
     #% Determine bounding box of individual signals
-    for iSignal in inputSignals.keys():
-      temp = inputSignals[iSignal]  # Temporary for convenience
-
-  #% Determine min[x, y] and max[x, y]data
-      xMin[iSignal], yMin[iSignal] = temp.min(axis=0)
-      xMax[iSignal], yMax[iSignal] = temp.max(axis=0)
-
-    xBound = [sum(xMin.values())/len(xMin.values()), sum(xMax.values())/len(xMax.values())]
-    yBound = [sum(yMin.values())/len(yMin.values()), sum(yMax.values())/len(yMax.values())]
+    for signal in inputSignals:
+      temp = signal['data'].copy()  # Temporary for convenience
+      #% Determine min[x, y] and max[x, y]data
+      signal['xMin'], signal['yMin'] = temp.min(axis=0)
+      signal['xMax'], signal['yMax'] = temp.max(axis=0)
+    # Compute average bounding box. Using shorthand to access list of dicts. 
+    xBound = [sum([signal['xMin'] for signal in inputSignals])/nSignal, 
+      sum([signal['xMax'] for signal in inputSignals])/nSignal]
+    yBound = [sum([signal['yMin'] for signal in inputSignals])/nSignal, 
+      sum([signal['yMax'] for signal in inputSignals])/nSignal]
 
     # Normalize the axis of each signal, then do arc-length calcs
-    for iSignal in inputSignals.keys():
+    for signal in inputSignals:
       # This needs to be a .copy(), otherwise scaling effects inputSignals 
-      temp = inputSignals[iSignal].copy() # Temporary for convenience
+      temp = signal['data'].copy() # Temporary for convenience
 
       #% Normalize from bounding box to [-1,1]
       temp[:,0] = temp[:,0] / (xBound[1]-xBound[0])
@@ -211,45 +202,33 @@ def arcgen(inputData,
       # % Append cumulative arc length to data array
       alen = np.cumsum(segments)
 
-      # % Compute normalized arc - length
-      maxAlen[iSignal] = np.max(alen)
-      inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen))
-      inputSignals[iSignal] = np.column_stack((inputSignals[iSignal], alen / maxAlen[iSignal]))
+      #% Compute normalized arc - length
+      signal['maxAlen'] = alen[-1]
+      signal['data'] = np.column_stack((signal['data'], alen))
+      signal['data'] = np.column_stack((signal['data'], alen/signal['maxAlen']))
 
-      # % Determine max[x, y] data
-      xNormMax[iSignal], yNormMax[iSignal] = temp.max(axis=0)
+      #% Remove spurious duplicates
+      _,uniqueIndex = np.unique(signal['data'][:,3], axis=0, return_index=True)
+      signal['data'] = signal['data'][uniqueIndex,:]
 
-      # % Remove spurious duplicates
-      temp = inputSignals[iSignal].copy()
-      _, uniqueIndex = np.unique(temp[:, 3], return_index=True)
-      inputSignals[iSignal] = temp[uniqueIndex, :]
+  # Uniformly resample x & y w.r.t. normalized arc-length, signal['data'][:,3]
+  for signal in inputSignals:
+    normAlen = np.linspace(0, signal['data'][-1, 3], num = nResamplePoints)
 
-  #% Compute mean and median arc - length deviation
-  meanAlen = sum(maxAlen.values())/len(maxAlen.values())
-  medianAlen = np.median(np.fromiter(maxAlen.values(), dtype=float))
-
-  for iSignal in inputSignals.keys():
-    meanDev[iSignal] = maxAlen[iSignal] - meanAlen
-    medianDevs[iSignal] = maxAlen[iSignal] - medianAlen
-
-    normAlen = np.linspace(0, inputSignals[iSignal][-1, 3], num = nResamplePoints)
-
-    resampX = interpolate.interp1d(inputSignals[iSignal][:, 3], inputSignals[iSignal][:, 0])(normAlen)
-    resampY = interpolate.interp1d(inputSignals[iSignal][:, 3], inputSignals[iSignal][:, 1])(normAlen)
+    resampX = interpolate.interp1d(signal['data'][:, 3], signal['data'][:, 0])(normAlen)
+    resampY = interpolate.interp1d(signal['data'][:, 3], signal['data'][:, 1])(normAlen)
 
     #% Resulting array is normalized arc - length, resampled x, resam.y
-    normalizedSignal[iSignal] = np.column_stack((normAlen, resampX, resampY))
+    signal['resampled'] = np.column_stack((normAlen, resampX, resampY))
 
   #% % For each resampled point, determine average and standard deviation across signals
   #% Initialize arrays
   charAvg = np.zeros((nResamplePoints, 2))
   stdevData = np.zeros((nResamplePoints, 2))
-
   for iPoints in range(nResamplePoints):
     temp = np.empty([0, 2])
-
-    for iSignal in inputSignals.keys():
-      temp = np.vstack((temp, normalizedSignal[iSignal][iPoints,1:3]))
+    for signal in inputSignals:
+      temp = np.vstack((temp, signal['resampled'][iPoints,1:3]))
     charAvg[iPoints,:]= temp.mean(axis=0)
     stdevData[iPoints,:] = temp.std(axis=0)
 
@@ -257,21 +236,20 @@ def arcgen(inputData,
   #% Enabled by option 'nWarpCtrlPts'. If 0, skip alignment.
   if nWarpCtrlPts > 0:
     #% Assemble signal matrices prior to correlation
-    signalX = np.zeros((nResamplePoints, len(inputSignals)))
-    signalY = np.zeros((nResamplePoints, len(inputSignals)))
-    for i in range(len(inputSignals)):
-      signalX[:,i] = normalizedSignal[list(inputSignals)[i]][:, 1]
-      signalY[:,i] = normalizedSignal[list(inputSignals)[i]][:, 2]
+    signalX = np.zeros((nResamplePoints, nSignal))
+    signalY = np.zeros((nResamplePoints, nSignal))
+    for iSig, signal in enumerate(inputSignals):
+      signalX[:,iSig] = signal['resampled'][:, 1]
+      signalY[:,iSig] = signal['resampled'][:, 2]
     meanCorrScore, corrArray = evalCorrScore(signalX,signalY)
+
     #% Assign pre-optimized correlation scores to debug structure
-    preWarpCorrArray = corrArray;
-    preWarpMeanCorrScore = meanCorrScore;
+    preWarpCorrArray = corrArray
+    preWarpMeanCorrScore = meanCorrScore
 
     #% Optimize warp points for arbitrary n warping points. Build bounds,
     #% constraints, and x0s
     nWarp = nWarpCtrlPts
-    nSignal = numberSignals
-
     if nWarp == 1:   #% nWarp == 1 is a special case as inequalites aren't needed
       x0 = 0.5 * np.ones((nSignal*2))
       lb = 0.15 * np.ones((nSignal*2))
@@ -280,7 +258,7 @@ def arcgen(inputData,
       b = []
       linConstraints = []
     elif nWarp >= 15:
-      raise ValueError('Specifying more than 10 interior warping points is not supported')
+      raise ValueError('Specifying more than 15 interior warping points is not supported')
     else:
       x0 = np.zeros((nWarp * (nSignal * 2)))
 
@@ -308,29 +286,28 @@ def arcgen(inputData,
 
     warpedSignals, signalX, signalY = warpArcLength(optWarpArray,inputSignals,nResamplePoints)
 
-
     #% Compute correlation score
     meanCorrScore, corrArray = evalCorrScore(signalX, signalY)
     #% Assign warped correlation scores to debug structure
     warpedCorrArray = corrArray
     warpedMeanCorrScore = meanCorrScore
-
         
-    #% Replace 'normalizedSignal' in 'responseSignal' and compute average and
-    #% standard deviation.
-    for iSignal, keys in enumerate(inputSignals):
-      normalizedSignal[keys] = warpedSignals[keys]
-      tempRow1 = np.concatenate([[0],optWarpArray[iSignal+nSignal,:],[1]])
-      tempRow2 = np.concatenate([[0],optWarpArray[iSignal,:],[1]])
-      warpControlPoints[keys] = np.concatenate([[tempRow1], [tempRow2]])
-      
-    for iPoints in range(nResamplePoints):
+    # Replace 'resampled' in 'inputSignals' and compute average and standard 
+    # deviation.
+    for iSig, signal in enumerate(inputSignals):
+      signal['resampled'] = warpedSignals[iSig]
+      tempRow1 = np.concatenate([[0],optWarpArray[iSig+nSignal,:],[1]])
+      tempRow2 = np.concatenate([[0],optWarpArray[iSig,:],[1]])
+      signal['warpControlPoints'] = np.column_stack([tempRow1.T, tempRow2.T])
+    
+    # Recalculate average and standard devation based on warped arc-length
+    for iPt in range(nResamplePoints):
       temp = np.empty((nSignal, 2)) #% probably cleaner way to do this.
-      for iSignal, keys in enumerate(inputSignals):
-        #% collect specific point from each signal
-        temp[iSignal,:] = normalizedSignal[keys][iPoints,1:3]
-      charAvg[iPoints,:] = np.mean(temp, axis = 0)
-      stdevData[iPoints,:] = np.std(temp, axis = 0,  ddof=1)
+      for iSig, signal in enumerate(inputSignals):
+        #% collect specified point from each signal
+        temp[iSig,:] = signal['resampled'][iPt,1:3]
+      charAvg[iPt,:] = np.mean(temp, axis = 0)
+      stdevData[iPt,:] = np.std(temp, axis = 0,  ddof=1)
 
   #%% Clamp minimum corridor width. Disabled if 'MinCorridorWidth' == 0
   #% Include influence of corridor scaling factor 'EllipseKFact'
@@ -341,7 +318,6 @@ def arcgen(inputData,
 
   #%% Diagnostic: Plot normalized signals and St. Devs. 
   if Diagnostics == 'on' or Diagnostics == 'detailed':
-      
     #% Plot normalized x,y 
     fig, ax = plt.subplots(2, 2, figsize = (8,6), dpi = 300)
     fig.suptitle('Arc-length Discretized Normalized Signals')
@@ -350,39 +326,33 @@ def arcgen(inputData,
     ax[1][0].title.set_text('Average and St.Dev. of X-Data')
     ax[1][1].title.set_text('Average and St.Dev. of Y-Data')
 
+    for iSig, signal in enumerate(inputSignals):
+      # Plot resampled signalls
+      ax[0][0].plot(signal['resampled'][:,1], signal['resampled'][:,2], label= signal['specId'])
 
-    for iSignal, keys in enumerate(inputSignals):
-      ax[0][0].plot(normalizedSignal[keys][:,1], normalizedSignal[keys][:,2], label= keys)
-      
       if nWarpCtrlPts > 0:
-        interpX = np.concatenate([[0],optWarpArray[iSignal+nSignal,:],[1]], axis=None, dtype='float')
-        interpY = np.concatenate([[0],optWarpArray[iSignal,:],[1]], axis=None, dtype='float')
-        ax[0][1].plot(interpX, interpY, lw=0.0, marker='x', markersize=6)
-        interpResults = interpolate.pchip(interpX, interpY, axis=0)(inputSignals[keys][:,3])
-        ax[0][1].plot(inputSignals[keys][:,3],interpResults, label = keys )
+        interpResults = interpolate.pchip(signal['warpControlPoints'][:,0], signal['warpControlPoints'][:,1], axis=0)(signal['data'][:,3])
+        ax[0][1].plot(signal['data'][:,3],interpResults, label = signal['specId'])
+        ax[0][1].plot(signal['warpControlPoints'][:,0], signal['warpControlPoints'][:,1], lw=0.0, marker='x', markersize=6)
       else: 
-          ax[0][1].title.set_text('No Warping Performed')
+        ax[0][1].title.set_text('No Warping Performed')
 
-      ax[1][0].plot(normalizedSignal[list(normalizedSignal.keys())[0]][:,0], normalizedSignal[keys][:,1], label= keys)
-      ax[1][0].errorbar(normalizedSignal[list(normalizedSignal.keys())[0]][:,0], charAvg[:,0], yerr=stdevData[:,0])
-      ax[1][1].plot(normalizedSignal[list(normalizedSignal.keys())[0]][:,0], normalizedSignal[keys][:,2], label= keys)
-      ax[1][1].errorbar(normalizedSignal[list(normalizedSignal.keys())[0]][:,0], charAvg[:,1], yerr=stdevData[:,1])
+      ax[1][0].plot(signal['resampled'][:,0], signal['resampled'][:,1], label= signal['specId'])
+      ax[1][1].plot(signal['resampled'][:,0], signal['resampled'][:,2], label= signal['specId'])
 
-
+    ax[1][0].errorbar(inputSignals[0]['resampled'][:,0], charAvg[:,0], yerr=stdevData[:,0], color='darkgrey')
+    ax[1][1].errorbar(inputSignals[0]['resampled'][:,0], charAvg[:,1], yerr=stdevData[:,1], color='darkgrey')
       
-    #ax[0][1].plot(interpX, interpY )
     ax[0][1].plot([0,1],[0,1])
     ax[0][0].set(xlabel='x-data', ylabel='y-data')
     ax[0][1].set(xlabel='Unwarped Normalized Arc-length', ylabel='Warped Normalized Arc-length')
     ax[1][0].set(xlabel='Normalized Arc-length', ylabel='x-data')
     ax[1][1].set(xlabel='Normalized Arc-length', ylabel='y-data')
 
-
-
     fig.tight_layout()
     fig.subplots_adjust(top=0.91)
     ax[0][0].legend(loc='lower right')
-    fig.savefig('outputs/Normalization and Warping.png')
+    fig.savefig('outputs/ARCGen Diagnostics.png')
 
   #%% Begin marching squares algorithm
   #% Create grids based on upper and lower of characteristic average plus 120%
@@ -755,8 +725,8 @@ def arcgen(inputData,
     for iPoint in range(nResamplePoints):
       ellipse = Ellipse(ellipse_xy[iPoint], stdevData[iPoint,0] * EllipseKFact*2, stdevData[iPoint,1] * EllipseKFact*2, angle = 0, edgecolor='grey', lw=0.6, facecolor='none')
       axd[0].add_artist(ellipse)
-    for iSignal in inputSignals.keys():
-      axd[0].plot(inputSignals[iSignal][:,0], inputSignals[iSignal][:,1], label = iSignal)
+    for signal in inputSignals:
+      axd[0].plot(signal['data'][:,0], signal['data'][:,1], label = iSignal)
     axd[0].plot(closedEnvelope[:,0], closedEnvelope[:,1], c = 'darkgreen', linewidth=0.5)
 
     axd[0].title.set_text('Char Avg and Ellipses')
@@ -767,23 +737,22 @@ def arcgen(inputData,
     axd[1].scatter(xx[:],yy[:], 0.25, zz[:]>=1, )
     axd[1].title.set_text('Corridor Extraction')
     axd[1].set(xlabel='x-data', ylabel='y-data')
-    figd.savefig('outputs/DetailedDiagnostics.png')
+    figd.savefig('outputs/Detailed Diagnostics.png')
 
   # print average and corridors to .csv file
   if resultsToFile:
     output = np.column_stack([charAvg,innerCorr,outerCorr])
     fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
-    np.savetxt("outputs/ArcGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
+    np.savetxt("outputs/ARCGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
     fig = plt.figure(figsize= (6,4), dpi=1200)
     if NormalizeSignals == 'on':
-      for iSignal in inputSignals.keys():
+      for signal in inputSignals:
         #% Resulting array is normalized arc - length, resampled x, resam.y
-        plt.plot(normalizedSignal[iSignal][:,1], normalizedSignal[iSignal][:,2], label = 'Input Signals', c ='grey', lw=1)
+        plt.plot(signal['resampled'][:,1], signal['resampled'][:,2], label = 'Input Signals', c ='grey', lw=1)
       plt.title('ArcGen - Normalization')
     else:
-      for iSignal in inputSignals.keys():
-
-        plt.plot(inputSignals[iSignal][:,0], inputSignals[iSignal][:,1], label = 'Input Signals', c = 'grey', lw = 1)
+      for signal in inputSignals:
+        plt.plot(signal['data'][:,0], signal['data'][:,1], label = 'Input Signals', c = 'grey', lw = 1)
       plt.title('ArcGen - No Normalization')
 
     plt.plot(charAvg[:,0], charAvg[:,1], label = 'Average - ARCGen', c ='black', lw = 1.5)
@@ -802,18 +771,7 @@ def arcgen(inputData,
     fig.savefig('outputs/ARCGen - Corridors and Signal Avg.png')
 
   # Create output of processed signals
-  processedSignals = []
-  for key in inputSignals.keys():
-    if nWarpCtrlPts > 0:
-      tempDict = {
-        "resampledSignal": normalizedSignal[key],
-        "warpControlPoints": warpControlPoints[key],
-      }
-    else:
-      tempDict = {
-        "resampledSignal": normalizedSignal[key],
-      }
-    processedSignals.append(tempDict)
+  processedSignals = inputSignals
 
   # Create debug dictionary
   debugData = {
@@ -880,34 +838,35 @@ def warpArcLength(warpArray, inputSignals, nResamplePoints):
   #% Initialize matrices
   signalsX = np.zeros((nResamplePoints, nSignal))
   signalsY = np.zeros((nResamplePoints, nSignal))
-  warpedSignals = {}
+  # Initialize a list for warped signal (a list of np.arrays)
+  warpedSignals = []
   
-  for iSignal, keys in enumerate(inputSignals):
-    signal = inputSignals[keys]
-    lmCtrlPts = np.concatenate([[0], warpArray[iSignal + nSignal, :], [1]])
+  for iSig, signal in enumerate(inputSignals):
+    temp = signal['data'].copy()
 
     #% prepend 0 and append 1 to warp points for this signal to create valid
     #% control points.
-    warpedCtrlPts = np.concatenate([[0], warpArray[iSignal,:], [1]])
+    lmCtrlPts = np.concatenate([[0], warpArray[iSig + nSignal, :], [1]])
+    warpedCtrlPts = np.concatenate([[0], warpArray[iSig,:], [1]])
 
     #% Construct warping function using SLM. This warps lmAlen to shiftAlen.
     #% Use warping fuction to map computed arc-lengths onto the shifted
     #% system. use built-in pchip function. This is a peicewise monotonic
     #% cubic spline. Signifincantly faster than SLM.
-    warpedNormAlen = interpolate.pchip(lmCtrlPts,warpedCtrlPts)(signal[:,3])
+    warpedNormAlen = interpolate.pchip(lmCtrlPts, warpedCtrlPts)(temp[:,3])
 
     #% Now uniformly resample normalzied arc-length
     resamNormwarpedAlen = np.linspace(0, 1, num = nResamplePoints)
-    resampX = interpolate.interp1d(warpedNormAlen, signal[:, 0], kind='linear', fill_value="extrapolate")(resamNormwarpedAlen)
-    resampY = interpolate.interp1d(warpedNormAlen, signal[:, 1], kind='linear', fill_value="extrapolate")(resamNormwarpedAlen)
+    resampX = interpolate.interp1d(warpedNormAlen, temp[:, 0], kind='linear', fill_value="extrapolate")(resamNormwarpedAlen)
+    resampY = interpolate.interp1d(warpedNormAlen, temp[:, 1], kind='linear', fill_value="extrapolate")(resamNormwarpedAlen)
 
     #% Assign to array for correlation calc
-    signalsX[:, iSignal] = resampX
-    signalsY[:, iSignal] = resampY
+    signalsX[:, iSig] = resampX
+    signalsY[:, iSig] = resampY
 
     #% Assemble a cell array containing arrays of resampled signals. Similar
     #% to 'normalizedSignal' in 'inputSignals' structure
-    warpedSignals[keys] = np.column_stack((resamNormwarpedAlen, resampX, resampY))
+    warpedSignals.append(np.column_stack((resamNormwarpedAlen, resampX, resampY)))
   
   return warpedSignals, signalsX, signalsY
 
@@ -916,13 +875,11 @@ def warpArcLength(warpArray, inputSignals, nResamplePoints):
 def warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal):
 #% Compute an array of penalty scores based on MSE between linear, unwarped
 #% arc-length and warped arc-length. Aim is to help prevent plateauing.
-  nSignals = nSignal
-
-  penaltyScores = np.zeros((nSignals));
+  penaltyScores = np.zeros((nSignal));
   unwarpedAlen = np.linspace(0, 1, num = nResamplePoints);
   
-  for iSignal in range(nSignals):
-    interpX = np.concatenate([[0],warpArray[iSignal+nSignals,:],[1]], axis=None, dtype='float')
+  for iSignal in range(nSignal):
+    interpX = np.concatenate([[0],warpArray[iSignal+nSignal,:],[1]], axis=None, dtype='float')
     interpY = np.concatenate([[0],warpArray[iSignal,:],[1]], axis=None, dtype='float')
     interpResults = interpolate.pchip(interpX, interpY, axis=0)(unwarpedAlen)
     penaltyScores[iSignal] = np.sum(((unwarpedAlen - interpResults)**2))
