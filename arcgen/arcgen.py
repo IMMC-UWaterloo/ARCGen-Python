@@ -359,14 +359,8 @@ def arcgen(inputData,
   #% of maximum standard deviation
   scaleFact = 1.25 * EllipseKFact
   xx,yy = np.meshgrid(np.linspace((np.min(charAvg[:,0]) - scaleFact*np.max(stdevData[:,0])), (np.max(charAvg[:,0]) + scaleFact * np.max(stdevData[:,0])), num = CorridorRes), np.linspace((np.min(charAvg[:,1]) - scaleFact*np.max(stdevData[:,1])), (np.max(charAvg[:,1]) + scaleFact*np.max(stdevData[:,1])), num = CorridorRes), indexing='xy')
-  zz = np.zeros(np.shape(xx))   #% initalize grid of ellipse values
-  # #% For each grid point, find the max of each standard deviation ellipse
-  kFact = EllipseKFact #% faster if no struct call in inner loop. 
-  nRes = CorridorRes   #% again, for speed
-  for iPt in range(nRes):
-    for jPt in range(nRes):
-      zz[iPt,jPt] = np.max(
-          (((xx[iPt,jPt] - charAvg[:,0])**2 / (stdevData[:,0]*kFact)**2 + (yy[iPt,jPt] - charAvg[:,1])**2 / (stdevData[:,1]*kFact)**2)**-1))
+  # Using separate function here for the potential of future optimization
+  zz = evaluateGrid(xx, yy, charAvg, stdevData, EllipseKFact)
       
   # % The following segments is the marching squares algorith. The goal of this
   # % algorithm is to find the zz=1 isoline, as this represents the outer
@@ -921,3 +915,14 @@ def find(array, string = None):
 
   else:
     return np.array(result).astype(int)
+
+def evaluateGrid(xx,yy,charAvg, stdevData, EllipseKFact):
+  zz = np.zeros(np.shape(xx))   #% initalize grid of ellipse values
+  nCorr = np.shape(xx)[0]
+  # #% For each grid point, find the max of each standard deviation ellipse
+  for iPt in range(nCorr):
+    for jPt in range(nCorr):
+      zz[iPt,jPt] = np.max(
+          (((xx[iPt,jPt] - charAvg[:,0])**2 / (stdevData[:,0]*EllipseKFact)**2 + (yy[iPt,jPt] - charAvg[:,1])**2 / (stdevData[:,1]*EllipseKFact)**2)**-1))
+
+  return zz
