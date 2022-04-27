@@ -1,97 +1,7 @@
-# %% ARCGen - Python | Arc-length Response Corridor Generator
-# %
-# % Created By:     D.C. Hartlen, M.ASc, EIT
-# % Date:           27-Jun-2021
-# % Updated By:     D.C. Hartlen, M.ASc, EIT
-# % Date:           24-Feb-2022
-# % Version:        Python 3.x
-# %
-# % ARCGen, short for Arc-length Response Corridor Generation, provides
-# % automated calculation of a characteristic average and response corridors
-# % on input signals regardless of if said signals are non-monotonic or
-# % hystertic. This is accomplished by re-parameterizing input signals based
-# % on arc-length. Corridors are extracted using a marching squares
-# % algorithm.
-# %
-# % If you use ARCGen in your research, please use the following citation:
-# %     Hartlen, D.C. & Cronin, D.S. (2022). "Arc-length Re-parametrization
-# %        and Signal Registration to Determine a Characteristic Average and
-# %        Statistical Response Corridors of Biomechanical Data." Frontiers
-# %        in Bioengineering and Biotechnology.
-# %
-# % ARCGen is released under a GNU GPL v3 license. No warranty or support is
-# % provided. The authors hold no responsibility for the validity, accuracy,
-# % or applicability of any results obtained from this code.
-# %
-# % This function has one mandatory input, four outputs, and many optional
-# % inputs. Optional inputs are defined using name-value pair arguments.
-# %
-# % Usage notes:
-# % It is common to see errors when running this function if the number of
-# % resampling points or corridor resolution is too sparse or signals
-# % exhibit significant variablity not accounted for through signal
-# % registration. This tends to manifest in either truncated corridors or the
-# % code termininating in an error. Often increasing resampling points or
-# % corridor resolution. Turning 'Diagnostics' to 'detailed' can help
-# % identify these issues.
-# %
-# % Computed corridors will often not extend all the way to the shared origin
-# % of input signals. This is because small low st. dev. at this shared point
-# % is too low to be captured during corridor extraction with the marching
-# % squares algorithm. There are two solutions to this problem. First, one
-# % could force a minimum corridors size using the 'MinCorridorWidth' option.
-# % Second, one could manually extend corridors in post-processing.
-# %
-# % MANDATORY INPUTS:
-# % -----------------
-# % A csv file including the signals to be placed in the working directory. The signals (data) needs to be placed in the csv file with or with a header
-#   such that each signal has a column for x-axis data and a column for y-axis data.
-# %
-# % OPTIONAL INPUTS:
-# % ----------------
-# % nResamplePoints: integer defining the number of points used to
-# %       re-parameterize input signals. Default: 100.
-# % CorridorRes: integeer defining the number of grid points used for the
-# %       marching squares algorithm. The sampling grid for the marching
-# %       squares algorithm extends 120% of extreme corridors. This parameter
-# %       defines the number of points along each side of the grid.
-# %       Default: 100. It is common to increase this significantly.
-# % NormalizeSignals: character arry used to turn on signal normalization.
-# %       Options: 'on' (default), 'off'
-# % EllipseKFact: float used to scale the major and minor axis of the
-# %       ellipses used for corridor generation. This value corrisponds to
-# %       the square root of the chi-squared CDF. Default: 1.0 (creates
-# %       corridors one standard deviation along the x and y axes)
-# % Diagnostics: character array used to activate diagnostic plots. Useful
-# %       for debugging errors. Options: 'off' (default), 'on', 'detailed'.
-# % MinCorridorWidth: Factor used to enforce a minimum corridor width. Any
-# %       st.dev. less than 'MinCorridorFactor'*max(st.dev.) is replaced with
-# %       'MinCorridorFactor'*max(st.dev.). x & y axes are handled
-# %       separately. A value of 0 (default) disables forcing minimum width.
-# % nWarpCtrlPts: integer that sets the number of interior control points
-# %       used for signal registration. A value of 0 (default) disables
-# %       signal registration
-# % WarpingPenalty: float specifying the penalty factor used during the
-# %       signal registration process. A value of 10^-2 (default) to 10^3 is
-# %       recommended, but the exact value will need to be tuned to a
-# %       specific problem.
-# %
-# % Mandatory OUTPUTS:
-# % ------------------
-# % charAvg: an [nResamplePoints,2] array containing the computed
-# %       characteristic average.
-# % innerCorr: an [nResamplePoints,2] array containing points defining the
-# %       inner corridor
-# % outerCorr: an [nResamplePoints,2] array containing points defining the
-# %       outer corridor
-# % Plot: a plot of the input signal, characteristic average and signal corridors.
-
-
-from statistics import stdev
-import numpy as np
-from numpy import inf
 import arcgen.polygonFunctions as poly
 from arcgen.uniquetol import uniquetol
+import numpy as np
+from numpy import inf
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 from scipy import interpolate
@@ -102,14 +12,122 @@ warnings.filterwarnings("ignore")
 
 def arcgen(inputData,
            nResamplePoints = 250,
+           CorridorRes = 250,
            Diagnostics = 'off',
            NormalizeSignals = 'on',
            EllipseKFact = 1,
-           CorridorRes = 250,
            MinCorridorWidth = 0,
            nWarpCtrlPts = 0,
            WarpingPenalty = 1e-2,
            resultsToFile = False):
+    """
+    ARCGen: Calcualtion of a characteristic average and statistical response
+    corridors using arc-length re-parameterization and signal registration. 
+    ARCGen can accomandate a very wide range of input signals, including non-
+    monotonic nad hystertic signals.
+
+    If you intend to publish work using ARCGen, please use the following 
+    citation:
+        Hartlen, D.C. & Cronin, D.S. (2022) "Arc-Length Re-Parametrization and 
+            Signal Registration to Determine a Characteristic Average and 
+            Statistical Response Corridors of Biomechanical Data." Frontiers in
+             Bioengineering and Biotechnology 10:843148. 
+             doi: 10.3389/fbioe.2022.843148
+
+    ARCGen is released under a GNU GPL v3 license. No warranty or support is
+    provided. The authors hold no responsibility for the validity, accuracy,
+    or applicability of any results obtained from this code.
+
+    Parameters
+    ----------
+    inputData: 
+        One of three input formats:
+        str: a path to a csv file containing all two-column signals 
+        list of np.ndarrays: useful when signals are processed prior to ARCGen
+        list of dictionaries: allows one to specify specimen ID. Dictionary
+            format: {'data': np.ndarray, 'specId', str}
+    nResamplePoints: int
+        Number of points used to resample input signals during arc-length
+            re-parameterization. Default: 250
+    CorridorRes: int
+        Size of grid (along one size) used for extracting corridors via a 
+            marching squares algorithm. Grid extends 120% beyond the extreme
+            corridor extents. Number of points in the grid is CorridorRes^2. 
+            Default: 250
+    nWarpCtrlPts: int
+        Number of interior control points used during signal registration. A 
+            value of 0 (default) disables signal registration
+    warpingPenalty: float
+        Penalty factor used to control warping during signal registration. 
+            Default: 1e-2
+    Diagnostics: str
+        Controls if debugging plots are produced. Options are: 'off' (default),
+            'on', 'detailed'
+    NormalizeSignals: str
+        Cotnrols if signal scaling is performed to prevent differences in 
+            extent between ordinate and abscissca from monopolizing arc-length.
+            Options: 'on' (Default and highly recommended), 'off'
+    EllipseKFact: float
+        Scales the size of elliptical confidence regions produced at each point
+            of the characteristic average, hence scaling corridor extent. 
+            Default: 1.0
+    MinCorridorWidth: float
+        Enforces minimum corridor width as a factor of maximum standard
+            deviation. Any st. dev. less than MinCorridorWidth*max(st. dev.) is 
+            replaced with MinCorridorWidth*max(st. dev.). Ordinate and 
+            abscissca are handled independently. Default: 1.0.
+
+    Returns
+    -------
+    charAvg: np.ndarray
+        Computed characteristic average (nResamplePoints x 2 array)
+    innCorr: np.ndarray
+        Computed inner corridor (nResamplePoints x 2 array)
+    outCorr: np.ndarray
+        Computed outer corridor (nResamplePoints x 2 array)
+    processedSignals: list of dictionaries
+        List with as many entries each containing a dictionary with data and
+            information used when processing input signals. Dictionary format
+            is {'data': np.ndarray, 'specId': str, 'xMax': float,
+            'xMin': float, 'yMax': float, 'yMin': float, 'maxAlen': float, 
+            'resampled': np.ndarray, 'warpControlPoints': np.ndarray}
+    debug: dictionary
+        Contains information useful for debugging purposes. Dictionary format:
+            {'charAvg': np.ndarray, 'stDev': np.ndarray, 
+            'preWarpCorrArray': np.ndarray, 'preWarpMeanCorr': float, 
+            'warpedCorrArray': np.ndarray, 'warpedMeanCorrScore': float}
+    
+    Notes
+    -----
+    Please refer to package readme, repository 
+    (https://github.com/IMMC-UWaterloo/ARCGen-Python), or provided article for
+    a detailed description of how ARCGen functions
+
+    It is common to see issues when running this function if the number of
+    resampling points or corridor resolution is too sparse or signals
+    exhibit significant variablity not accounted for through signal
+    registration. This tends to manifest in either truncated corridors or the
+    code termininating in an error. Often increasing resampling points or
+    corridor resolution. Turning 'Diagnostics' to 'detailed' can help
+    identify these issues.
+
+    Computed corridors will often not extend all the way to the shared origin
+    of input signals. This is because small low st. dev. at this shared point
+    is too low to be captured during corridor extraction with the marching
+    squares algorithm. There are two solutions to this problem. First, one
+    could force a minimum corridors size using the 'MinCorridorWidth' option.
+    Second, one could manually extend corridors in post-processing.
+
+    The python version of ARCGen is generally updated less frequently than the
+    original MATLAB version of ARCGen. Active developments are implimented
+    in MATLAB prior to being ported to python. The MATLAB version of ARCGen 
+    can be found at https://github.com/IMMC-UWaterloo/ARCGen
+
+    A very special thanks is due to Ahmed Ibrahim, my fellow Ph.D. candidate
+    at UWaterloo, for his help in getting this port started. 
+
+    Copyright (c) 2022 Devon C. Hartlen
+    """
 
     # Creating a directory for results
     if (Diagnostics == 'on') or (Diagnostics == 'detailed') or (resultsToFile):
@@ -786,7 +804,7 @@ def arcgen(inputData,
     if nWarpCtrlPts > 0:
         debugData = {
             "charAvg": charAvg,
-            "stDev": stdev,
+            "stDev": stdevData,
             "preWarpCorrArray": preWarpCorrArray,
             "preWarpMeanCorr": preWarpCorrArray,
             "warpedCorrArray": warpedCorrArray,
@@ -795,15 +813,35 @@ def arcgen(inputData,
     else:
         debugData = {
             "charAvg": charAvg,
-            "stDev": stdev,
+            "stDev": stdevData,
         }
 
     return charAvg, innerCorr, outerCorr, processedSignals, debugData
     
 
-#Function used to evaluate correlation score between signals
 def evalCorrScore(signalsX, signalsY):
-    # Correlation score taken from the work of Nusholtz et al. (2009)
+    """
+    Compute the correlation score of signals for use in signal registration. 
+    Correlation score used here is taken from the work of Nusholtz et al.
+    (2009)
+
+    Parameters:
+    -----------
+    signalsX: np.ndarray
+        X-component of re-parameterized signals, each signal is a column
+    signalsY: np.ndarray
+        Y-component of re-parameterized signals, each signal is a column
+
+    Returns:
+    --------
+    meanCorrScore: float
+        Average of x and y correlation scores
+    corrScoreArray: np.ndarray
+        Array of x and y axis correlation scores
+
+    Copyright (c) 2022 Devon C. Hartlen
+    """
+
     # Compute cross-correlation matrix of all signals to each other
     corrMatX = np.corrcoef(signalsX, rowvar=False)
     corrMatY = np.corrcoef(signalsY, rowvar=False)
@@ -819,16 +857,42 @@ def evalCorrScore(signalsX, signalsY):
     return meanCorrScore, corrScoreArray
 
 
-# Function used to compute objective for optimization
-def warpingObjective(optimWarp,nCtrlPts,inputSignals,WarpingPenalty,nResamplePoints):
-    # Control points are equally spaced in arc-length.
+def warpingObjective(optimWarp,nCtrlPts,inputSignals,
+                     penaltyFactor,nResamplePoints):
+    """
+    Objective function used by optimization algorithm during signal 
+    registration with the goal of computing optimal control point locations. 
+    Does not perform warping, only evaluates objective for optimization
+
+    Parameters
+    ----------
+    optimWarp: np.ndarray
+        Array of warping control points for which the objective function is 
+        computed for
+    nCtrlPts: int
+        Number of interior control points
+    inputSignals: list of dictionaries
+        The internal list of dictionaries used to keep track of signal
+        information inside arcgen()
+    penaltyFactor: float
+        Penalty factor used to control warping
+    nResamplePoints: int
+        Number of points that re-parameterized signals contains.
+    Returns
+    -------
+    optScore: float
+        objective score used for optimization
+    
+    Copyright (c) 2022 Devon C. Hartlen
+    """
+
     # optimwarp is a column vector with first warped control point in the
     # first nSignal indices, then 2nd control point in the next nSignal indices
     nSignal = len(inputSignals)
     warpArray = optimWarp.reshape((2*nSignal, nCtrlPts), order='F')
     
     # Compute a warping penalty
-    penaltyScore = warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal)
+    penaltyScore = warpingPenalty(warpArray, penaltyFactor, nResamplePoints, nSignal)
     penaltyScore = np.mean(penaltyScore, axis=0)
 
     # Perform warping
@@ -842,8 +906,33 @@ def warpingObjective(optimWarp,nCtrlPts,inputSignals,WarpingPenalty,nResamplePoi
     return optScore
 
 
-# Function used to warp arc-length function
 def warpArcLength(warpArray, inputSignals, nResamplePoints):
+    """
+    Given an array of warping control points, perform arc-length warping on 
+    re-parameterized signals.
+
+    Parameters
+    ----------
+    warpArray: np.ndarray
+        Array of interior warping control points for all signals
+    inputSignals: np.ndarray
+        The internal list of dictionaries used by arcgen() to keep track of 
+        signals and signal information
+    nResamplePoints: int
+        Number of points that re-parameterized signals contain
+    
+    Returns
+    -------
+    warpedSignals: list of np.ndarrays
+        Resampled signals warped w.r.t arc-length using the control points 
+        specified in warpArray
+    signalsX: np.ndarray
+        X-component of warped signals, each signal is a column
+    signalsY: np.ndarray
+        Y-component of warped signals, each signal is a column
+
+    Copyright (c) 2022 Devon C. Hartlen
+    """
 
     # Warp array: each row is warping points for an input signal, each column
     # is warped point. Control points are interpolated  on [0,1] assuming
@@ -883,10 +972,32 @@ def warpArcLength(warpArray, inputSignals, nResamplePoints):
     return warpedSignals, signalsX, signalsY
 
 
-# Penalty function to prevent plateaus and extreme divergence in warping functions
-def warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal):
-# Compute an array of penalty scores based on MSE between linear, unwarped
-# arc-length and warped arc-length. Aim is to help prevent plateauing.
+def warpingPenalty(warpArray, penaltyFactor, nResamplePoints, nSignal):
+    """
+    Computes the combined warping penalty for all signals given the provided
+    warping points and inputted penalty factor
+
+    Parameters
+    ----------
+    warpArray: np.ndarray
+        Array of interior warping control points for all signals
+    penaltyFactor: float
+        Penalty factor used to control warping
+    nResamplePoints: int
+        Number of points that re-parameterized signals contain
+    nSignal: int
+        Number of input signals
+
+    Returns
+    -------
+    penaltyScores: list, array-like
+        Individual penalty scores for each warping function inputted. Same 
+        length as nSignal
+    
+    Copyright (c) 2022 Devon C. Hartlen
+    """
+    # Compute an array of penalty scores based on MSE between linear, unwarped
+    # arc-length and warped arc-length. Aim is to help prevent plateauing.
     penaltyScores = np.zeros((nSignal));
     unwarpedAlen = np.linspace(0, 1, num = nResamplePoints);
     
@@ -896,22 +1007,33 @@ def warpingPenalty(warpArray, WarpingPenalty, nResamplePoints, nSignal):
         interpResults = interpolate.pchip(interpX, interpY, axis=0)(unwarpedAlen)
         penaltyScores[iSignal] = np.sum(((unwarpedAlen - interpResults)**2))
     
-    penaltyScores = WarpingPenalty * penaltyScores
+    penaltyScores = penaltyFactor * penaltyScores
 
     return penaltyScores
 
 
-# helper function to perform linear interpolation to an isovalue of 1 only
 def interpIso(x1, y1, x2, y2):
+    """
+    Performs linear interpolation to find where x is equal to 1.0. Only used 
+    for marching squares algorithm
+    """
     val = x1+(x2-x1)*(1-y1)/(y2-y1)  
     return val
 
 def interpLin(x1, y1, x2,  y2, xq):
+    """
+    General linear interpolation/extrapolation between two points.
+    """
     return y1 + (xq-x1)*(y2-y1)/(x2-x1)
 
 
-# returns  indices and values of nonzero elements
 def find(array, string = None):
+    """
+    Returns indices and values of non-zero elements. Similar functionality 
+    to MATLAB find() function. 
+
+    Copyright (c) 2022 Ahmed Ibrahim
+    """
     # making sure that a np array is used
     array = np.array(array)
     n = array.ndim
@@ -934,7 +1056,38 @@ def find(array, string = None):
     else:
         return np.array(result).astype(int)
 
-def evaluateGrid(xx,yy,charAvg, stdevData, EllipseKFact):
+
+def evaluateGrid(xx, yy, charAvg, stdevData, EllipseKFact):
+    """
+    Evaluates the sampling grid of the marching squares algorithm used to
+    extract corridors. At each sampling point, every ellipse in the
+    characteristic average is computed, with the maximum value being saved. 
+
+    Parameters:
+    xx: np.ndarray
+        Square array of sampling point locations in x
+    yy: np.ndarray
+        Square array of sampling point locations in y
+    charAvg: np.ndarray
+        Charactertic average of input signals
+    stdevData: np.ndarray
+        Standard deviation computed at each point of characteristic average
+    EllipseKFact: float
+        Factor used to scale the size of the ellipes at each point in the 
+        characteristic average, hence scale the extent of the corridors
+
+    Returns
+    -------
+    zz: np.ndarray
+        Square array of sampled values at each sampling point xx, yy
+
+    Notes
+    -----
+    This function was broken out from main body of arcgen() with the hopes that
+    optimization could be performed to improve runtime. Later profiling has 
+    shown that this is by no means the slowest part of arcgen(). That would be
+    the minimization algorithm and polyxpoly()
+    """
     zz = np.zeros(np.shape(xx))   # initalize grid of ellipse values
     nCorr = np.shape(xx)[0]
     # For each grid point, find the max of each standard deviation ellipse
