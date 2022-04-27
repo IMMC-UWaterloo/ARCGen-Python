@@ -126,4 +126,4 @@ The characteristic average of the input signals is defined as the mean value at 
 # Change Log
 
 ## Version 2022.1
-This is the first production release of ARCGen-Python. There will enevitably be bugs. If you discover any, thoughtout the course of your usage of ARCGen-Python, [please open an issue ticket](https://github.com/IMMC-UWaterloo/ARCGen-Python/issues).
+This is the first production release of ARCGen-Python. There will inevitably be bugs. If you discover any, thoughtout the course of your usage of ARCGen-Python, [please open an issue ticket](https://github.com/IMMC-UWaterloo/ARCGen-Python/issues).
