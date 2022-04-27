@@ -121,6 +121,8 @@ def arcgen(inputData,
   # pertenant data. Will consist of a list of dictionaries. 
   inputSignals = []
 
+  # Handle input data for various cases: Path, standard list, list of dicts
+  # First case: if inputData is a path
   if isinstance(inputData, str):
     # Load from csv. empty values in shorter signals are given as 'nan'
     dataframe = np.genfromtxt(inputData, delimiter=',', encoding=None)
@@ -137,13 +139,26 @@ def arcgen(inputData,
       # Remove 'nan' entries
       indexNan = np.logical_not(np.isnan(temp[:,0]))
       # add to dictionary
-      inputSignals.append({'data': temp[temp,:], 
+      inputSignals.append({'data': temp[indexNan,:], 
         'specId': 'Signal '+str(iSig+1) })
+  
+  # Now check for the other two input cases. Both start with a list check
   elif isinstance(inputData, list):
-    nSignal = len(inputData)
-    for iSig in range(len(inputData)):
-      inputSignals.append({'data': inputData[iSig], 
-        'specId': 'Signal '+str(iSig+1)})
+    # Case 2: list of np.ndarrays
+    if isinstance(inputData[0], np.ndarray):
+      nSignal = len(inputData)
+      for iSig in range(len(inputData)):
+        inputSignals.append({'data': inputData[iSig], 
+          'specId': 'Signal '+str(iSig+1)})
+    
+    # Case 3: list of dictionaries
+    elif isinstance(inputData[0], dict):
+      nSignal = len(inputData)
+      for entry in inputData:
+        inputSignals.append({'data': entry['data'], 
+          'specId': entry['specId']})
+    else:
+      raise ValueError('Incorrectly formatted input list')
   else:
     raise ValueError('Input is not a path or or correctly formatted')
 
@@ -738,6 +753,7 @@ def arcgen(inputData,
     output = np.column_stack([charAvg,innerCorr,outerCorr])
     fmt = ",".join(["%s"] + ["%10.6e"] * (output.shape[1]-1))
     np.savetxt("outputs/ARCGen Output.csv", output, fmt=fmt, header='Average Corridor, , Inner Corridor, , Outer Corridor, , \n x-axis, y-axis, x-axis, y-axis, x-axis, y-axis', comments='')
+
     fig = plt.figure(figsize= (6,4), dpi=1200)
     if NormalizeSignals == 'on':
       for signal in inputSignals:
@@ -833,7 +849,7 @@ def warpArcLength(warpArray, inputSignals, nResamplePoints):
   signalsX = np.zeros((nResamplePoints, nSignal))
   signalsY = np.zeros((nResamplePoints, nSignal))
   # Initialize a list for warped signal (a list of np.arrays)
-  warpedSignals = []
+  warpedSignals = [None]*nSignal
   
   for iSig, signal in enumerate(inputSignals):
     temp = signal['data'].copy()
@@ -843,10 +859,7 @@ def warpArcLength(warpArray, inputSignals, nResamplePoints):
     lmCtrlPts = np.concatenate([[0], warpArray[iSig + nSignal, :], [1]])
     warpedCtrlPts = np.concatenate([[0], warpArray[iSig,:], [1]])
 
-    #% Construct warping function using SLM. This warps lmAlen to shiftAlen.
-    #% Use warping fuction to map computed arc-lengths onto the shifted
-    #% system. use built-in pchip function. This is a peicewise monotonic
-    #% cubic spline. Signifincantly faster than SLM.
+    #% Define warping function based on monotonic peicewise cubic hermite splines
     warpedNormAlen = interpolate.pchip(lmCtrlPts, warpedCtrlPts)(temp[:,3])
 
     #% Now uniformly resample normalzied arc-length
@@ -860,7 +873,7 @@ def warpArcLength(warpArray, inputSignals, nResamplePoints):
 
     #% Assemble a cell array containing arrays of resampled signals. Similar
     #% to 'normalizedSignal' in 'inputSignals' structure
-    warpedSignals.append(np.column_stack((resamNormwarpedAlen, resampX, resampY)))
+    warpedSignals[iSig] = np.column_stack((resamNormwarpedAlen, resampX, resampY))
   
   return warpedSignals, signalsX, signalsY
 

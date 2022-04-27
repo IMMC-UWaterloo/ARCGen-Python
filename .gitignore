@@ -1,5 +1,5 @@
 # ARCGen specific
-results/
+outputs/
 
 # Visual Studios Code
 .vscode/
