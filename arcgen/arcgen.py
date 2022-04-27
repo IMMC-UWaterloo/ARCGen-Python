@@ -1063,7 +1063,8 @@ def evaluateGrid(xx, yy, charAvg, stdevData, EllipseKFact):
     extract corridors. At each sampling point, every ellipse in the
     characteristic average is computed, with the maximum value being saved. 
 
-    Parameters:
+    Parameters
+    ----------
     xx: np.ndarray
         Square array of sampling point locations in x
     yy: np.ndarray
