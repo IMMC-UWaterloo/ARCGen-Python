@@ -108,7 +108,7 @@ def arcgen(inputData,
            EllipseKFact = 1,
            CorridorRes = 250,
            MinCorridorWidth = 0,
-           nWarpCtrlPts = 4,
+           nWarpCtrlPts = 0,
            WarpingPenalty = 1e-2,
            resultsToFile = False):
 
@@ -784,14 +784,20 @@ def arcgen(inputData,
   processedSignals = inputSignals
 
   # Create debug dictionary
-  debugData = {
-    "charAvg": charAvg,
-    "stDev": stdev,
-    "preWarpCorrArray": preWarpCorrArray,
-    "preWarpMeanCorr": preWarpCorrArray,
-    "warpedCorrArray": warpedCorrArray,
-    "warpedMeanCorrScore": warpedMeanCorrScore,
-  }
+  if nWarpCtrlPts > 0:
+    debugData = {
+      "charAvg": charAvg,
+      "stDev": stdev,
+      "preWarpCorrArray": preWarpCorrArray,
+      "preWarpMeanCorr": preWarpCorrArray,
+      "warpedCorrArray": warpedCorrArray,
+      "warpedMeanCorrScore": warpedMeanCorrScore,
+    }
+  else:
+    debugData = {
+      "charAvg": charAvg,
+      "stDev": stdev,
+    }
 
   return charAvg, innerCorr, outerCorr, processedSignals, debugData
 	

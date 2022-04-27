@@ -6,7 +6,16 @@ rotational acceleration. This example also uses three input formats: specifying
 a path to read from, a list of numpy arrays, and a list of dictionaries to 
 specify specimen ID
 
-Copyright (c) Devon C. Hartlen
+Dataset Citation:
+   Ewing, C. L., & Thomas, D. J. (1972). "Human Head and Neck Response to
+      Impact Acceleration." Naval Aerospace Medical Research Lab
+      Pensacola Fl.
+
+   National Highway Traffic Safety Administration. (2017). "Biomechanics
+      Test Database." 
+      https://www.nhtsa.gov/research-data/databases-and-software
+
+Copyright (c) 2022 Devon C. Hartlen
 
 """
 
