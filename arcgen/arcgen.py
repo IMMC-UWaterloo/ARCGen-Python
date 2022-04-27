@@ -76,6 +76,11 @@ def arcgen(inputData,
             deviation. Any st. dev. less than MinCorridorWidth*max(st. dev.) is 
             replaced with MinCorridorWidth*max(st. dev.). Ordinate and 
             abscissca are handled independently. Default: 1.0.
+    resultsToFile: bool
+        If True, arcgen() will write characteristic average and corridors to a 
+            csv file as well as producing a plot of input signals, average and
+            corridors. These are output to the folder 'outputs' in the current 
+            working directory. Default: False
 
     Returns
     -------
@@ -123,7 +128,7 @@ def arcgen(inputData,
     in MATLAB prior to being ported to python. The MATLAB version of ARCGen 
     can be found at https://github.com/IMMC-UWaterloo/ARCGen
 
-    A very special thanks is due to Ahmed Ibrahim, my fellow Ph.D. candidate
+    Very special thanks is due to Ahmed Ibrahim, my fellow Ph.D. candidate
     at UWaterloo, for his help in getting this port started. 
 
     Copyright (c) 2022 Devon C. Hartlen
