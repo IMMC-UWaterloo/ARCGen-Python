@@ -1,19 +1,32 @@
-import numpy as np
-import numpy.typing as npt
 """
 A series of functions pertaining to polygons to be used with ARCGen. These 
 functions serve as replacements for the original matlab functions
 
 """
 
-def signedpolyarea(xy):
+import numpy as np
+import numpy.typing as npt
+
+def signedpolyarea(xy: npt.ArrayLike):
     """ 
-    Computes the signed area of a polygon
+    Computes the signed area of a polygon. When positive y is upward, positive 
+    area indicates clockwise. Only suitable for non-complex polygon (no 
+    self-intersections)
 
-    When positive y is upward, positive area indicates clockwise
+    Parameters
+    ----------
+    xy: np.ndarray
+        Two column array containing x-y points of the polygon. Does not need
+            to be closed
+    
+    Returns
+    -------
+    area: float
+        Signed area of provided polygon
 
-    Returns signed area
+    Copyright (c) 2022 Devon C. Hartlen
     """
+
     xy = np.asarray(xy)
     area = 0
     j = xy.shape[0] - 1
@@ -26,22 +39,70 @@ def signedpolyarea(xy):
 
     return area
 
+
 def ispolycw(xy):
     """
-    Returns if polygon is clockwise
+    Determines if the inputted polygon is defined clockwise 
+
+    Parameters
+    ----------
+    xy: np.ndarray
+        Two column array containing x-y points of the polygon. Does not need
+            to be closed
+
+    Returns
+    -------
+    ispolycw: bool
+        Returns true if polygon is defined clockwise
+
+    Copyright (c) 2022 Devon C. Hartlen
     """
     return np.sign(signedpolyarea(xy)) > 0
 
+
 def polyarea(xy):
     """
-    Returns the area of a polygon
+    Determines the area of the inputted polygon. Polygon does not need to be 
+    closed. Only suitable for non-complex polygon (no self-intersections)
+
+    Parameters
+    ----------
+    xy: np.ndarray
+        Two column array containing x-y points of the polygon. Does not need
+            to be closed
+    
+    Returns
+    -------
+    area: float
+        Unsigned area of provided polygon
+
+    Copyright (c) 2022 Devon C. Hartlen
     """
     return np.abs(signedpolyarea(xy))
+
 
 def segintersect(xy1, xy2):
     """
     Determines if line segments xy1, xy2 intersect
     xy1, xy2 are 2x2 np arrays where rows are points, columns are xy
+
+    Determines if two line segments intersect
+
+    Parameters
+    ----------
+    xy1: np.ndarray
+        2x2 array with x coordinate in the first column and y coordinate in 
+            the second. Two points are defined by row.
+    xy2: np.ndarray
+        2x2 array with x coordinate in the first column and y coordinate in 
+            the second. Two points are defined by row.
+
+    Returns
+    -------
+    bool
+        Returns True if segments intersect. 
+    
+    Copyright (c) 2022 Devon C. Hartlen
     """
 
     # Compute the four required orientations
@@ -71,13 +132,28 @@ def segintersect(xy1, xy2):
     # otherwise return false
     return False
 
+
 def inpolygon(poly: npt.ArrayLike, point: npt.ArrayLike):
     """
     Determines if the point is in the polygon. Uses ray-casting method. Not
     suitable for self-intersecting polygons, but handles non-convex polygons
-    fine
-    poly: nx2 np.array of points defining polygon
-    point 1x2 np.array defining point of interest
+    fine. Does not assume closed polygons. 
+
+    Parameters
+    ----------
+    poly: np.ndarray
+        Two column array of points defining a polygon. Polygon must be closed
+            (i.e. first and last entry must be the same)
+    point: np.ndarray
+        1x2 array defining the point to be tested. First column is x coordinate
+            second column is y corrdinate. 
+
+    Returns
+    -------
+    bool
+        True if point is inside the polygon
+    
+    Copyright (c) 2022 Devon C. Hartlen
     """
     poly = np.asarray(poly)
     point = np.asarray(point)
@@ -107,11 +183,32 @@ def inpolygon(poly: npt.ArrayLike, point: npt.ArrayLike):
     # If the intersect count is odd, then point is in polygon. 
     return (intcount % 2 == 1)
 
+
 def polyxpoly(poly1: npt.ArrayLike, poly2: npt.ArrayLike):
     """
-    Computes the intersection of two polynomials, returning x,y intercept and 
-    index intercepts. Does not assumed closed polygons. 
-    poly1, poly2: nx2 np.array of points defining polygon
+    Computes the intersection of two polynomials. Does not assumed closed 
+    polygons. 
+
+    Parameters
+    ----------
+    poly1: np.ndarray
+        Two column array defining closed polygon (first and last index should
+            be the same)
+    poly2: np.ndarray
+        Two column array defining closed polygon (first and last index should
+            be the same)
+
+    Returns
+    -------
+    interVals: np.ndarray
+        Two column array (x, y) of points where the two polygons intersect
+    interInds: np.ndarray
+        Two column array specifying the indices were the two polygons
+            intersect. Column 1 are indices of the first polygon. Returns
+            interpolated indices as floats. Use floor() or ceil() to get 
+            integer indices on either side of intersection. 
+
+    Copyright (c) 2022 Devon C. Hartlen
     """
     # Loop through each polygon and find intersections
     npoly1 = poly1.shape[0]
@@ -161,8 +258,26 @@ def polyxpoly(poly1: npt.ArrayLike, poly2: npt.ArrayLike):
 
 def _segorientation(p1, p2, p3):
     """
-    Returns to orientation of three provided points
-    p1, p2, p3 are 2 element arrays representing xy point location
+    Returns to orientation of three provided points used to compute if segments
+    intercept
+
+    Parameters
+    ----------
+    p1: array-like
+        (x,y) location of point 1
+    p2: array-like
+        (x,y) location of point 2
+    p3: array-like
+        (x,y) location of point 3
+
+    Returns
+    -------
+    int
+        Either -1, 0, 1 depending on orientation case. 
+
+    See Also
+    --------
+    segintersect()
     """
 
     orient = ( (p2[1]-p1[1]) * ( p3[0]-p2[0]) 
@@ -180,8 +295,25 @@ def _segorientation(p1, p2, p3):
 
 def _segcollinear(p1, p2, p3):
     """
-    Checks if p2 is collinear to p1 and p3
-    p1, p2, p3 are 2 element arrays representing xy points
+    Checks if p2 is collinear with p1 and p3.
+
+    Parameters
+    ----------
+    p1: array-like
+        (x,y) location of point 1
+    p2: array-like
+        (x,y) location of point 2
+    p3: array-like
+        (x,y) location of point 3
+
+    Returns
+    -------
+    bool
+        True if p2 is collienar with p1 and p3
+
+    See Also
+    --------
+    segintersect()
     """
     if ( (p2[0] <= max(p1[0], p3[0])) and (p2[0] >= min(p1[0], p3[0]))
         and (p2[1] <= max(p1[1], p3[1])) and (p2[1] >= min(p1[1], p3[1])) ):
