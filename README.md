@@ -6,9 +6,9 @@ Biofidelity response corridors are commonly used to assess the performance of su
 
 This document provides information on how to use ARCGen as well as a high-level overview of the methodologies that ARCGen uses. Exampels can be found in the 'ExampleCasesAndDatasets' folder. While an overview of ARCGen's operation is provided below, please refer to please refer to [Hartlen and Cronin (2022)](https://www.frontiersin.org/article/10.3389/fbioe.2022.843148) for detailed, rigorous coverage. Examples and datasets provided with this code are taken from Hartlen and Cronin (2022). 
 
-ARCGen-python can be installed directly from PyPI as follows 
+ARCGen-Python is available for Python 3.8 can be installed directly from PyPI as follows. 
+
 ```
-PIP DETAILS TO BE UPDATED
 pip install arcgen-python
 ```
 
@@ -16,7 +16,7 @@ ARCGen-Python is released under the open-sourced GNU GPL v3 license. No warranty
 
 # Referencing
 
-If you use ARCGen in published research, please use the following citation in your research. 
+If you use ARCGen-Python in published research, please use the following citation in your research. 
 
 Hartlen D.C. and Cronin D.S. (2022), "Arc-Length Re-Parametrization and Signal Registration to Determine a Characteristic Average and Statistical Response Corridors of Biomechanical Data." *Frontiers in Bioengineering and Biotechnology* 10:843148. doi: 10.3389/fbioe.2022.843148
 
@@ -42,7 +42,7 @@ Anyone is free to fork ARCGen for thier own work, so long as you follow the requ
 # Usage
 ARCGen-Python is called using the function `arcgen()` and returns a the computed characteristic average, inner corridors, outer corridors, as well as processed signal data and debug data. Input signals can be defined in a number of ways. See the discussion of function parameters below. 
 
-A minimum working example of ARCGen is provided below. Additional examples are provided in the 'ExampleCasesAndDatasets' directory. 
+A minimum working example of ARCGen is provided below. Additional examples are provided in the ['ExampleCasesAndDatasets' directory](https://github.com/IMMC-UWaterloo/ARCGen-Python/tree/main/ExampleCasesAndDatasets). 
 
 ````python
 from arcgen import arcgen
@@ -126,4 +126,4 @@ The characteristic average of the input signals is defined as the mean value at 
 # Change Log
 
 ## Version 2022.1
-This is the first production release of ARCGen-Python. There will inevitably be bugs. If you discover any, thoughtout the course of your usage of ARCGen-Python, [please open an issue ticket](https://github.com/IMMC-UWaterloo/ARCGen-Python/issues).
+This is the first production release of ARCGen-Python. There will inevitably be bugs. If you discover any throughout the course of your usage of ARCGen-Python, [please open an issue ticket](https://github.com/IMMC-UWaterloo/ARCGen-Python/issues).

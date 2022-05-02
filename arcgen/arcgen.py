@@ -21,7 +21,7 @@ def arcgen(inputData,
            WarpingPenalty = 1e-2,
            resultsToFile = False):
     """
-    ARCGen: Calcualtion of a characteristic average and statistical response
+    ARCGen: Calculation of a characteristic average and statistical response
     corridors using arc-length re-parameterization and signal registration. 
     ARCGen can accomandate a very wide range of input signals, including non-
     monotonic nad hystertic signals.
