@@ -247,6 +247,8 @@ def polyxpoly(poly1: npt.ArrayLike, poly2: npt.ArrayLike):
         ])
         # Solve for both reduced indices and actual intercept locations
         X = np.linalg.solve(A,B)
+        # 2023-05-01 (DCH) Bug with X due to array dims. Flatten ensures vector, not array
+        X = X.flatten()
         # break into indices and locations
         interVals[i,:] = [X[2], X[3]]
         interInds[i,:] = [ind[0]+X[0], ind[1]+X[1]]
