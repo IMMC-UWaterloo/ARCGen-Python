@@ -1,5 +1,5 @@
 import numpy as np
-from uniquetol import uniquetol
+from arcgen.uniquetol import uniquetol
 import pytest
 
 def test_uniquetol_manual():
