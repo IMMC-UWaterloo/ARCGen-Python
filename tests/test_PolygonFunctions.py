@@ -1,4 +1,4 @@
-import polygonFunctions as poly
+import arcgen.polygonFunctions as poly
 import pytest
 
 import numpy as np
