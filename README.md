@@ -125,5 +125,8 @@ The characteristic average of the input signals is defined as the mean value at 
 
 # Change Log
 
+## Version 2023.1
+Important fix to `polygonFunction.polyxpoly()` as well as fixes to unit tests. 
+
 ## Version 2022.1
 This is the first production release of ARCGen-Python. There will inevitably be bugs. If you discover any throughout the course of your usage of ARCGen-Python, [please open an issue ticket](https://github.com/IMMC-UWaterloo/ARCGen-Python/issues).

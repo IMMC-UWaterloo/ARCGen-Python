@@ -4,7 +4,7 @@ with open("README.md","r", encoding="utf-8") as fh:
       long_description = fh.read()
 
 setup(name='arcgen-python',
-      version='2022.1',
+      version='2023.1.0',
       description='Arc-length Response Corridor Generation',
       long_description= long_description,
       long_description_content_type="text/markdown",
