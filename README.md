@@ -1,4 +1,4 @@
-# # ARCGen-Python - General, Feature-Based Corridor Generation
+# ARCGen-Python - General, Feature-Based Corridor Generation
 
 ![ARCGen Logo](./Assets/ARCGen.svg)
 
