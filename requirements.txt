@@ -1,4 +1,0 @@
-numpy==1.22.1
-scipy==1.8.0
-semantic-version==2.8.5
-matplotlib==3.5.1

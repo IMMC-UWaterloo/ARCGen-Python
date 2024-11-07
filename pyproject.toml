@@ -1,0 +1,40 @@
+[project]
+name = "arcgen-python"
+version = "1.5.0"
+description = "Arc-length Response Corridor Generation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Devon Hartlen", email = "hartlendc@gmail.com"},
+]
+keywords = ['averaging', 'statistics', 'corridors', 'arc-length', 'response corridors']
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "matplotlib>=3.9.2",
+    "numpy>=2.1.3",
+    "scipy>=1.14.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/IMMC-UWaterloo/ARCGen-Python"
+Documentation = "https://github.com/IMMC-UWaterloo/ARCGen-Python"
+Repository = "https://github.com/IMMC-UWaterloo/ARCGen-Python.git"
+Issues = "https://github.com/IMMC-UWaterloo/ARCGen-Python/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["arcgen"]
