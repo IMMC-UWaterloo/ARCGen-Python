@@ -17,7 +17,7 @@ def arcgen(inputData,
            NormalizeSignals = 'on',
            EllipseKFact = 1,
            MinCorridorWidth = 0,
-           nWarpCtrlPts = 0,
+           nWarpCtrlPts = 2,
            WarpingPenalty = 1e-2,
            resultsToFile = False):
     """
@@ -291,7 +291,6 @@ def arcgen(inputData,
 
         # Assign pre-optimized correlation scores to debug structure
         preWarpCorrArray = corrArray
-        preWarpMeanCorrScore = meanCorrScore
 
         # Optimize warp points for arbitrary n warping points. Build bounds,
         # constraints, and x0s
@@ -1240,8 +1239,8 @@ def warpingPenalty(warpArray, penaltyFactor, nResamplePoints, nSignal):
     """
     # Compute an array of penalty scores based on MSE between linear, unwarped
     # arc-length and warped arc-length. Aim is to help prevent plateauing.
-    penaltyScores = np.zeros((nSignal));
-    unwarpedAlen = np.linspace(0, 1, num = nResamplePoints);
+    penaltyScores = np.zeros((nSignal))
+    unwarpedAlen = np.linspace(0, 1, num = nResamplePoints)
     
     for iSignal in range(nSignal):
         interpX = np.concatenate([[0], warpArray[iSignal+nSignal,:], [1]], 
