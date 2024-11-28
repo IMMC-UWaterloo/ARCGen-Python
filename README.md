@@ -3,63 +3,40 @@
 ![ARCGen Logo](./Assets/ARCGen.svg)
 
 
-> :memo: ARCGen-Python is a port of the original [ARCGen for MATLAB](https://github.com/IMMC-UWaterloo/ARCGen). The python version of ACRGen is not updated as regularly as as MATLAB source code. 
+> [!NOTE]
+> ARCGen-Python is a port of the original [ARCGen for MATLAB](https://github.com/IMMC-UWaterloo/ARCGen). The python version of ACRGen is not updated as regularly as as MATLAB source code. 
 
-ARCGen is a general, robust methodology to provide a feature-based assessment of average response and variability in the form of a characteristic average response and statistical response corridors. In particular, ARCGen is well suited to tackling the challenging types of signals common in biomechanics, such as:
+ARCGen is a general, robust methodology providing feature-based assessment of average response and variability in the form of a characteristic average response and statistical response corridors. In particular, ARCGen is well suited to tackling the challenging types of signals common in biomechanics, such as:
 - Monotonic signals that do not share a common termination point
 - Highly oscillatory signals, such as those that capture head or limb kinematics
 - Hysteretic signals or signals that are non-monotonic in both axes
 
-ARCGen uses two major components to provide consistent, robust assessment without distortion of the characteristic shape of the underlying input signals. First, arc-length re-parameterization provides a framework to assess signals that may not terminate at common locations. Second, signal registration provides the ability to match common features shared across signals, enabling an assessment of variability in multiple axes simultaneously.
+ARCGen is released under the open-sourced GNU GPL v3 license. No warranty or guarantee of support is provided. The authors hold no responsibility for the validity, accuracy, or applicability of any results obtained from this code.
 
-ARCGen-Python is available for Python 3.8+ can be installed directly from PyPI as follows. 
+# Installation
 
-```
-pip install arcgen-python
-```
+ARCGen-Python is available for Python 3.10+ and is installed directly fron PyPI as follows :
 
-The following documentation is intended to provide an overview of how ARCGen operates at a high level and document the syntax required to use ARCGen. Users are encouraged to look at the tutorials and test cases found in the `ExampleCasesAndDatasets` folder for practical usage of ARCGen and common items to consider when using ARCGen. Detailed coverage of the theory behind ARCGen's operation can be found in [Hartlen and Cronin (2022)](https://www.frontiersin.org/article/10.3389/fbioe.2022.843148).
-
-ARCGen-Python is released under the open-sourced GNU GPL v3 license. No warranty or guarantee of support is provided. The authors hold no responsibility for the validity, accuracy, or applicability of any results obtained from this code.
-
-# Referencing
-
-If you use ARCGen-Python in published research, please use the following citation in your research. 
-
-Hartlen D.C. and Cronin D.S. (2022), "Arc-Length Re-Parametrization and Signal Registration to Determine a Characteristic Average and Statistical Response Corridors of Biomechanical Data." *Frontiers in Bioengineering and Biotechnology* 10:843148. doi: 10.3389/fbioe.2022.843148
-
-Bibtex format:
-```
-@article{Hartlen_Cronin_2022,
-  AUTHOR={Hartlen, Devon C. and Cronin, Duane S.},   
-  TITLE={Arc-Length Re-Parametrization and Signal Registration to Determine a Characteristic Average and Statistical Response Corridors of Biomechanical Data},      
-  JOURNAL={Frontiers in Bioengineering and Biotechnology},      
-  VOLUME={10},      
-  YEAR={2022},      
-  URL={https://www.frontiersin.org/article/10.3389/fbioe.2022.843148},       
-  DOI={10.3389/fbioe.2022.843148},       
-  ISSN={2296-4185},   
-}
-```
-# Contributing
-
-If you find discover any bugs or issues, or would like to suggest improvements, please create an [issue on this github repostiory](https://github.com/DCHartlen/ARCGen-Python/issues). You are invited free to submit pull requests to integrate fixes and features directly into ARCGen, although pull requests will be reviewed before integration. 
-
-Anyone is free to fork ARCGen for thier own work, so long as you follow the requirements of the GNU GPL v3 license.
+``` pip install arcgen-python```
 
 # Usage
-ARCGen-Python is called using the function `arcgen()` and returns a the computed characteristic average, inner corridors, outer corridors, as well as processed signal data and debug data. Input signals can be defined in a number of ways. See the discussion of function parameters below. 
 
-A minimum working example of ARCGen is provided below. Additional examples are provided in the ['ExampleCasesAndDatasets' directory](https://github.com/IMMC-UWaterloo/ARCGen-Python/tree/main/ExampleCasesAndDatasets). 
+ARCGen is used by calling the ```arcgen()``` function within a python script, as follows. ARCGen has one required input parameter (```inputData```) and a host of optional keyword arguments that provide important control over arc-length re-parameterization and signal registration. An example of ARCGen used in code with typical name-value pair arguments is provided below. 
 
-````python
-from arcgen import arcgen
+```python
+charAvg, innCorr, outCorr, processed, debug = arcgen(
+    inputData,
+    nResamplePoints=250,
+    CorridorRes=250,
+    nWarpCtrlPts=2,
+    WarpingPenalty=1e-2,
+)
+```
+Complete documentation of all of ARCGen's input arguments and outputs is available below and in the code. Several example cases are provided in the [`ExampleCasesAndDatasets` folder of this repository](https://github.com/IMMC-UWaterloo/ARCGen-Python/tree/main/ExampleCasesAndDatasets). 
 
-charAvg, innCorr, outCorr, processedSignals, debug = arcgen(inputData)
-````
 
-## Parameters
-`inputSignals`: Contains the signals from which a characteristic average and corridors can be computed. Signals must be two-dimensional (i.e. acceleration-time, force-displacement) but do not need to contain the same number of points or be sampled at the same sampling frequency. There is no limit to the number of input signals ARCGen can accommodate, but runtime will increase as the number of signals increases. `inputSignals` must be defined in one of the following three formats. 
+## Input Arguments
+`inputData`: Contains the signals from which a characteristic average and corridors can be computed. Signals must be two-dimensional (i.e. acceleration-time, force-displacement) but do not need to contain the same number of points or be sampled at the same sampling frequency. There is no limit to the number of input signals ARCGen can accommodate, but runtime will increase as the number of signals increases. `inputSignals` must be defined in one of the following three formats. 
 - a string of the path to a CSV file containing all signals stacked columnwise. 
 - A list of np.ndarrays, where each entry of the list is a two-column ndarray containing signal points
 - A list of dictionaries, where each entry is a dictionary containing the signal points and a signal identifier. Dictionary format is {'data': np.ndarray, 'specId': str}, where 'data' is a two-column array of signal points and str is a string used as the signal identifier. 
@@ -107,31 +84,63 @@ The remaining parameters are optional and have defined default values in 'arcgen
 - warpedCorrArray: x and y correlation scores after performing signal registration
 - warpedMeanCorrScore: mean correlation score after performing signal registration
 
-# Overview of Operation
-For a detailed description of how ARCGen operates, please refer to Hartlen and Cronin (2022). Only a high-level overview is presented here. 
 
-The operation of ARCGen can be broken into three stages: arc-length re-parameterization (from which ARCGen draws its name), signal registration, and statistical analysis. 
+# Referencing
+
+If you use ARCGen-Python in published research, please use the following citation in your research. 
+
+Hartlen D.C. and Cronin D.S. (2022), "Arc-Length Re-Parametrization and Signal Registration to Determine a Characteristic Average and Statistical Response Corridors of Biomechanical Data." *Frontiers in Bioengineering and Biotechnology* 10:843148. doi: 10.3389/fbioe.2022.843148
+
+Bibtex format:
+```
+@article{Hartlen_Cronin_2022,
+  AUTHOR={Hartlen, Devon C. and Cronin, Duane S.},   
+  TITLE={Arc-Length Re-Parametrization and Signal Registration to Determine a Characteristic Average and Statistical Response Corridors of Biomechanical Data},      
+  JOURNAL={Frontiers in Bioengineering and Biotechnology},      
+  VOLUME={10},      
+  YEAR={2022},      
+  URL={https://www.frontiersin.org/article/10.3389/fbioe.2022.843148},       
+  DOI={10.3389/fbioe.2022.843148},       
+  ISSN={2296-4185},   
+}
+```
+# Contributing
+
+If you find discover any bugs or issues, or would like to suggest improvements, please create an [issue on this github repostiory](https://github.com/DCHartlen/ARCGen-Python/issues). You are invited free to submit pull requests to integrate fixes and features directly into ARCGen, although pull requests will be reviewed before integration. 
+
+Anyone is free to fork ARCGen for thier own work, so long as you follow the requirements of the GNU GPL v3 license.
+
+
+# Overview of Operation
+For a detailed description of how ARCGen operates, please refer to [Hartlen and Cronin (2022)](https://www.frontiersin.org/article/10.3389/fbioe.2022.843148). Therefore, only a high-level overview is presented here. In general, the operation of ARCGen can be divided into three stages: arc-length re-parameterization, signal registration, and statistical analysis. 
 
 ## Arc-length Re-parameterization
-Arc-length re-parameterization is the critical feature that allows ARCGen to handle input signals that are non-monotonic in both axes (a behaviour called hysteresis). Arc-length provides a convenient means to define input points with respect to a strictly monotonic value inherently tied to the shape of the signal. 
+Arc-length re-parameterization allows ARCGen to handle input signals that are non-monotonic in either measurement axis (a behaviour called hysteresis). Arc-length provides a convenient means to define input points with respect to a strictly monotonic value inherently tied to the shape of the signal. 
 
-Before computing the arc-length of each curve, all signals are scaled to eliminate issues of differing magnitude between the axes. This scaling is based on the mean extreme values of all input signals, such that the relative magnitude of each scaled signal relative to one another is maintained. These scaled values are only used for arc-length calculations and are not used later in signal registration or statistical analysis. 
+Before computing the arc-length of each curve, all signals are scaled to eliminate issues of differing magnitude between the axes. Scaling ensures that the shape of the resulting average and corridors are reflective of the inputted signals. All signals are scaled based on the mean extreme values of both measurement axes to eliminate magnitude differences between axes when calculating arc-length. These scaled values are only used for arc-length calculations and are not used later in signal registration or statistical analysis.
 
-Once signals have been normalized, the arc-length of each signal is computed for each point in the signal. The arc-length is then normalized to itself, such that all signals have a normalized arc-length of 1.0. Finally, signals are resampled such that all signals have points at the same normalized arc-lengths. 
+Once signals have been scaled, the arc-length of each signal is computed for each point in the signal. The arc-length is then normalized to the total arc-length of each signal, such that all signals have a normalized arc-length of 1.0. Finally, signals are resampled such that all signals have points at the same normalized arc-lengths. 
 
 ## Signal Registration
-One of the underlying assumptions of arc-length re-parametrization is that critical features in the signal appear at approximately the same normalized arc-length. However, if said features are not perfectly aligned, an average can skew or smear the resulting characteristic average. Additionally, features such as significant variability or noise can dramatically affect arc-length calculation, changing where critical features occur with respect to normalized arc-length. 
+One of the underlying assumptions of arc-length re-parametrization is that critical features in the signal appear at approximately the same normalized arc-length. However, the resulting characteristic average can be distorted if said features are not perfectly aligned. Additionally, features such as significant variability or noise can dramatically affect the arc-length calculation, changing where critical features occur with respect to normalized arc-length. 
 
-Signal registration (or curve registration) can be applied to help align critical features of signals. This process introduces a warping function for each input signal that subtly alters how each signal is re-sampled with respect to arc-length to align critical features. These warping functions (strictly monotonic, piecewise Hermite cubic splines) are determined for all signals simultaneously by maximizing cross-correlation between all signals. To ensure that warping functions do not produce highly skewed, unrealistic responses, a penalty function is used to limit the amount of warping introduced. 
+Signal registration is applied to help align critical features of signals. This process introduces a warping function for each input signal that subtly alters how each signal is resampled with respect to arc-length to align critical features. These warping functions (strictly monotonic, piecewise Hermite cubic splines) are determined for all signals simultaneously by maximizing cross-correlation between all signals. To ensure that warping functions do not produce highly skewed, unrealistic responses, a penalty function is used to limit the amount of warping introduced. 
 
 Signal registration is an optional process and is not needed if input signals are very highly correlated or strictly monotonic. While some experimentation is needed to select the best number of control points, a rule of thumb would be to set the number of interior control points to the number of inflection points expected in the characteristic average. 
 
 ## Statistical Analysis
-Following arc-length reparameterization, all input signals will have the same number of points at the same normalized arc-length. If signal registration has been performed, the registered points will be used for statistical analysis. Statistical analysis is undertaken in a point-wise fashion at each normalized arc-length. This analysis assumes points are uncorrelated and distributed according to a two-dimensional normal distribution. Based on this assumption, an elliptical confidence region can be constructed at each normalized arc-length. The length of the major and minor axes of these ellipses are proportional to the standard deviation at each arc-length. However, unlike a one-dimensional confidence region, where a plus and minus one standard deviation region will account for 68% of variability, the same two-dimensional elliptical region only accounts for 38%. To control the size of the region based on variance, the quantile function of the chi-squared distribution at the desired variance or p-value can be used to scale the size of the ellipse (optional input option `EllipseKFact`).
+Following arc-length re-parameterization and registration, all input signals will have the same number of points and have features aligned with respect to a consistent normalized arc-length. Statistical analysis is undertaken in a point-wise fashion at each normalized arc-length. This analysis assumes points are uncorrelated and distributed according to a two-dimensional normal distribution. Based on this assumption, an elliptical confidence region can be constructed at each normalized arc-length. The length of these ellipses' major and minor axes is proportional to the standard deviation at each arc-length. 
 
-The characteristic average of the input signals is defined as the mean value at each normalized arc-length. The response corridors are the envelope of all ellipses. As there is no closed-form way of extracting this envelope, a marching-squares algorithm is used to extract this envelope numerically. Because the envelope is extracted numerically, it is important that the number of resampling points (`nResamplePoints`) are large enough to ensure that ellipses are sufficiently overlapped to provide a smooth, realistic envelope. Similarly, the resolution of the marching squares grid (`CorridorRes`) should be fine enough to capture the shape of the ellipses correctly. This last feature is similar to ensuring that the mesh of a finite element or computational fluid dynamics simulation is fine enough to resolve features. 
+The characteristic average of the input signals is defined as the mean value at each normalized arc-length. The response corridors are the envelope of all ellipses. As there is no closed-form way of extracting this envelope, a marching-squares algorithm is used to extract this envelope numerically. Because the envelope is extracted numerically, it is important that the number of resampling points (`nResamplePoints`) is large enough to ensure that ellipses are sufficiently overlapped to provide a smooth, realistic envelope. Similarly, the resolution of the marching squares grid (`CorridorRes`) should be fine enough to capture the shape of the ellipses correctly. This last feature is similar to ensuring that the mesh of a finite element or computational fluid dynamics simulation is fine enough to resolve features. 
 
 # Change Log
+
+## Version 1.3.0
+Version 1.3.0 of ARCGen-python sees incremental improvement over previous versions. In addition to switching from calendar versioning to semantic versioning, ARCGen-python 1.3.0 now performs signal registration with 2 control points by default if `nWarpCtrlPts` is not otherwise defined. These changes do not change any of the underlying behaviour of ARCGen, but are intended to ensure new users get better results more quickly. 
+
+Additionally, the `README.md` has been updated to increase clarity and get new users up and running more quickly. 
+
+ - `nWarpCtrlPts` default value changed to 2 from 0 (signal registration disabled)
 
 ## Version 2023.1
 Important fix to `polygonFunction.polyxpoly()` as well as fixes to unit tests. 
