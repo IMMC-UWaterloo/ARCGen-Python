@@ -49,11 +49,11 @@ The remaining parameters are optional and have defined default values in 'arcgen
 
 `NormalizeSignals`: A character array used to control whether magnitude normalization is performed before arc-length re-parameterization. It is highly recommended that this option is enabled. Input options: 'on' (default), 'off'
 
-`EllipseKFact`: A float used to scale the size of the ellipses defined by the confidence region at each point of the characteristic average. A value of 1.0 creates a corridor that is one standard deviation wide at each point of the characteristic average. However, this only corresponds to approximately 38% of variability for two-dimensional data. The square root of the chi-squared quantile function can be used to define response corridors with respect to p-value. Default: 1.0 (or corridors of plus and minus one standard deviation).
+`EllipseKFact`: A float used to scale the size of the ellipses defined by the confidence region at each point of the characteristic average. A value of 1.0 creates a corridor that is one standard deviation wide at each point of the characteristic average. Default: 1.0 (or corridors of plus and minus one standard deviation).
 
 `MinCorridorWidth`: A float value used to enforce a minimum corridor width based on maximum standard deviation. This option can be useful if corridors do not extend to the beginning or end of the characteristic average due to low variability between input signals. However, enforcing a minimum width is not representative of the actual variability of underlying data. Default: 0.0 (does not enforce a minimum corridor width). 
 
-`nWarpCtrlPts`: An integer defining the number of interior control points used for signal registration. Default: 0 (disables signal registration)
+`nWarpCtrlPts`: An integer defining the number of interior control points used for signal registration. A value of 0 disables signal registration. Default: 2 (some warping). 
 
 `WarpingPenalty`: A float defining the penalty factor used during signal registration. Default: 1e-2. 
 
