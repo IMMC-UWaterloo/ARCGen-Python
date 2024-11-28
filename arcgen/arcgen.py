@@ -56,7 +56,7 @@ def arcgen(inputData,
             Default: 250
     nWarpCtrlPts: int
         Number of interior control points used during signal registration. A 
-            value of 0 (default) disables signal registration
+            value of 0 disables signal registration. Default: 2
     warpingPenalty: float
         Penalty factor used to control warping during signal registration. 
             Default: 1e-2
@@ -131,7 +131,7 @@ def arcgen(inputData,
     Very special thanks is due to Ahmed Ibrahim, my fellow Ph.D. candidate
     at UWaterloo, for his help in getting this port started. 
 
-    Copyright (c) 2022 Devon C. Hartlen
+    Copyright (c) 2024 Devon C. Hartlen
     """
 
     # Creating a directory for results
