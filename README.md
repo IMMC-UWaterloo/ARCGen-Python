@@ -135,8 +135,8 @@ The characteristic average of the input signals is defined as the mean value at 
 
 # Change Log
 
-## Version 1.3.0
-Version 1.3.0 of ARCGen-python sees incremental improvement over previous versions. In addition to switching from calendar versioning to semantic versioning, ARCGen-python 1.3.0 now performs signal registration with 2 control points by default if `nWarpCtrlPts` is not otherwise defined. These changes do not change any of the underlying behaviour of ARCGen, but are intended to ensure new users get better results more quickly. 
+## Version 2024.1.0
+Version 2024.1.0 of ARCGen-python sees incremental improvement over previous versions. ARCGen-python 2024.1.0 now performs signal registration with 2 control points by default if `nWarpCtrlPts` is not otherwise defined. These changes do not change any of the underlying behaviour of ARCGen, but are intended to ensure new users get better results more quickly. 
 
 Additionally, the `README.md` has been updated to increase clarity and get new users up and running more quickly. 
 
