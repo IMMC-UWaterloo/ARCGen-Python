@@ -276,7 +276,7 @@ def arcgen(inputData,
         for signal in inputSignals:
             temp = np.vstack((temp, signal['resampled'][iPoints,1:3]))
         charAvg[iPoints,:]= temp.mean(axis=0)
-        stdevData[iPoints,:] = temp.std(axis=0)
+        stdevData[iPoints,:] = temp.std(axis=0,  ddof=1)
 
     # Align normalized arc-length signals based on minimized correlation.
     # Enabled by option 'nWarpCtrlPts'. If 0, skip alignment.
