@@ -753,14 +753,14 @@ def arcgen(inputData,
         foundShiftedInd = find(vertConnToFind_.astype(int), 'first')
 
         # If we have found an index 
-        if foundShiftedInd == 0 and vertConn[j,0] == vertToFind:
+        if foundShiftedInd.size == 0 and vertConn[j,0] == vertToFind:
             continue
 
-        elif foundShiftedInd == 0 and vertConn[j,1] == vertToFind:
+        elif foundShiftedInd.size == 0 and vertConn[j,1] == vertToFind:
             vertConn[j, [0, 1]] = vertConn[j, [1, 0]]
             continue
         
-        elif foundShiftedInd > 0:
+        elif foundShiftedInd.size > 0:
             foundInd = foundShiftedInd + j
 
             # swap found vert conn row with j row
