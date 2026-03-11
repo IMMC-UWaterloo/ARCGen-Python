@@ -6,7 +6,7 @@
 </picture>
 </div>
 
-ARCGen development is now managed by Arcus Analytica. To learn more about upcoming developments in signal processing, objective model ratings, and statistical testing, please check out [arcusanalytica.com]()
+ARCGen development is now managed by Arcus Analytica. To learn more about upcoming developments in signal processing, objective model ratings, and statistical testing, please check out [arcusanalytica.com](https://arcusanalytica.com/)
 
 <div align="center">
 <picture>
