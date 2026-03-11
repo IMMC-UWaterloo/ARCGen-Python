@@ -1,23 +1,31 @@
 # ARCGen-Python - General, Feature-Based Corridor Generation
 
-![ARCGen Logo](./Assets/ARCGen.svg)
+<div align="center">
+<picture>
+  <img alt="ARCGen Logo" src="./Assets/ARCGen.svg">
+</picture>
+</div>
 
 ARCGen development is now managed by Arcus Analytica. To learn more about upcoming developments in signal processing, objective model ratings, and statistical testing, please check out [arcusanalytica.com]()
 
+<div align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./Assets/Arcus_White_on_Transparent.svg">
   <source media="(prefers-color-scheme: light)" srcset="./Assets/Arcus_Black_on_Transparent.svg">
   <img alt="Arcus Logo" src="./Assets/Arcus_Black_on_Transparent.svg">
 </picture>
+</div>
 
+<div align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./Assets/Arcus_Products_Dark_R1.svg">
   <source media="(prefers-color-scheme: light)" srcset="./Assets/Arcus_Products_Light_R1.svg">
-  <img alt="Arcus Logo" src="./Assets/Arcus_Products_Light_R1.svg">
+  <img alt="Arcus Product Logos" src="./Assets/Arcus_Products_Light_R1.svg">
 </picture>
+</div>
 
 > [!NOTE]
-> ARCGen-Python is a port of the original [ARCGen for MATLAB](https://github.com/IMMC-UWaterloo/ARCGen). The python version of ACRGen is not updated as regularly as as MATLAB source code. 
+> ARCGen-Python is a port of the original [ARCGen for MATLAB](https://github.com/IMMC-UWaterloo/ARCGen).
 
 ARCGen is a general, robust methodology providing feature-based assessment of average response and variability in the form of a characteristic average response and statistical response corridors. In particular, ARCGen is well suited to tackling the challenging types of signals common in biomechanics, such as:
 - Monotonic signals that do not share a common termination point
