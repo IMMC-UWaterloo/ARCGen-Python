@@ -2,6 +2,19 @@
 
 ![ARCGen Logo](./Assets/ARCGen.svg)
 
+ARCGen development is now managed by Arcus Analytica. To learn more about upcoming developments in signal processing, objective model ratings, and statistical testing, please check out [arcusanalytica.com]()
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./Assets/Arcus_White_on_Transparent.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./Assets/Arcus_Black_on_Transparent.svg">
+  <img alt="Arcus Logo" src="./Assets/Arcus_Black_on_Transparent.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./Assets/Arcus_Products_Dark_R1.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./Assets/Arcus_Products_Light_R1.svg">
+  <img alt="Arcus Logo" src="./Assets/Arcus_Products_Light_R1.svg">
+</picture>
 
 > [!NOTE]
 > ARCGen-Python is a port of the original [ARCGen for MATLAB](https://github.com/IMMC-UWaterloo/ARCGen). The python version of ACRGen is not updated as regularly as as MATLAB source code. 
@@ -15,7 +28,7 @@ ARCGen is released under the open-sourced GNU GPL v3 license. No warranty or gua
 
 # Installation
 
-ARCGen-Python is available for Python 3.10+ and is installed directly fron PyPI as follows :
+ARCGen-Python is available for Python 3.11+ and is installed directly fron PyPI as follows :
 
 ``` pip install arcgen-python```
 
