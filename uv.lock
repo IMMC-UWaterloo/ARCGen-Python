@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 
 [[package]]
 name = "arcgen-python"
-version = "2024.1.0"
+version = "2026.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "matplotlib" },

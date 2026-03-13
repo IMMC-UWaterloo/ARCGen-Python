@@ -1,6 +1,6 @@
 [project]
 name = "arcgen-python"
-version = "2024.1.0"
+version = "2026.1.0"
 description = "Arc-length Response Corridor Generation"
 readme = "README.md"
 requires-python = ">=3.11"
