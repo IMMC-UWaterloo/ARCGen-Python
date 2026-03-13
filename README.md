@@ -1,10 +1,14 @@
 # ARCGen-Python - General, Feature-Based Corridor Generation
 
-![ARCGen Logo](./Assets/ARCGen.svg)
+<div align="center">
+<picture>
+  <img alt="ARCGen Logo" src="./Assets/ARCGen.svg">
+</picture>
+</div>
 
 
 > [!NOTE]
-> ARCGen-Python is a port of the original [ARCGen for MATLAB](https://github.com/IMMC-UWaterloo/ARCGen). The python version of ACRGen is not updated as regularly as as MATLAB source code. 
+> ARCGen-Python is a port of the original [ARCGen for MATLAB](https://github.com/IMMC-UWaterloo/ARCGen).
 
 ARCGen is a general, robust methodology providing feature-based assessment of average response and variability in the form of a characteristic average response and statistical response corridors. In particular, ARCGen is well suited to tackling the challenging types of signals common in biomechanics, such as:
 - Monotonic signals that do not share a common termination point
@@ -13,11 +17,31 @@ ARCGen is a general, robust methodology providing feature-based assessment of av
 
 ARCGen is released under the open-sourced GNU GPL v3 license. No warranty or guarantee of support is provided. The authors hold no responsibility for the validity, accuracy, or applicability of any results obtained from this code.
 
+ARCGen development is now maintained by Arcus Analytica. To learn more about upcoming developments in signal processing, objective model ratings, and statistical testing, please check out [arcusanalytica.com](https://arcusanalytica.com/)
+
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./Assets/Arcus_White_on_Transparent.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./Assets/Arcus_Black_on_Transparent.svg">
+  <img alt="Arcus Logo" src="./Assets/Arcus_Black_on_Transparent.svg">
+</picture>
+</div>
+
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./Assets/Arcus_Products_Dark_R1.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./Assets/Arcus_Products_Light_R1.svg">
+  <img alt="Arcus Product Logos" src="./Assets/Arcus_Products_Light_R1.svg">
+</picture>
+</div>
+
 # Installation
 
-ARCGen-Python is available for Python 3.10+ and is installed directly fron PyPI as follows :
+ARCGen-Python is available for Python 3.11+ and is installed directly fron PyPI as follows:
 
 ``` pip install arcgen-python```
+
+ARCGen-Python requires Numpy 2.3+ and Scipy 1.16+ for best results.  
 
 # Usage
 
@@ -134,6 +158,15 @@ Following arc-length re-parameterization and registration, all input signals wil
 The characteristic average of the input signals is defined as the mean value at each normalized arc-length. The response corridors are the envelope of all ellipses. As there is no closed-form way of extracting this envelope, a marching-squares algorithm is used to extract this envelope numerically. Because the envelope is extracted numerically, it is important that the number of resampling points (`nResamplePoints`) is large enough to ensure that ellipses are sufficiently overlapped to provide a smooth, realistic envelope. Similarly, the resolution of the marching squares grid (`CorridorRes`) should be fine enough to capture the shape of the ellipses correctly. This last feature is similar to ensuring that the mesh of a finite element or computational fluid dynamics simulation is fine enough to resolve features. 
 
 # Change Log
+
+## Version 2026.1.0
+Version 2026.1.0 is a maintenance release providing minor bug fixes and improved depenency handling. 
+
+- A bug was fixed where standard deviations population standard deviation was calculated when no warping points were specificied and sample standard deviation otherwise. Sample standard deviation is now used throughout. It is always recommended to use at least 1 warping point. 
+- A bug was fixed which addresses a deprecation in Numpy 2.2+ were empty array checking was changed. ARCGen now handles this behaviour much more robustly. 
+- The minimum supported version of python was incremented to 3.11.
+- Minimum versions of Numpy and Scipy were incremented. 
+- Code was formatted and transitioned to a "src" format for improved developer experiences
 
 ## Version 2024.1.0
 Version 2024.1.0 of ARCGen-python sees incremental improvement over previous versions. ARCGen-python 2024.1.0 now performs signal registration with 2 control points by default if `nWarpCtrlPts` is not otherwise defined. These changes do not change any of the underlying behaviour of ARCGen, but are intended to ensure new users get better results more quickly. 
